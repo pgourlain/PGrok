@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "PGrokClient": {
+      "commandName": "Project",
+      "commandLineArgs": "--tunnelId=\"svc1\" --localAddress=http://localhost:5066 --serverAddress=https://pgrok--5i4bucm.jollydune-05c89f19.westeurope.azurecontainerapps.io/"
+    }
+  }
+}

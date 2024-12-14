@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\PGrok\Common\TunnelRequest.cs" Link="Common\TunnelRequest.cs" />
+    <Compile Include="..\PGrok\Common\TunnelResponse.cs" Link="Common\TunnelResponse.cs" />
+    <Compile Include="..\PGrok\Common\WebSocketHelpers.cs" Link="Common\WebSocketHelpers.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Common\" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "PGrok": {
+      "commandName": "Project",
+      "commandLineArgs": "--server --localhost=true"
+    },
+    "Container (Dockerfile)": {
+      "commandName": "Docker"
+    }
+  }
+}
