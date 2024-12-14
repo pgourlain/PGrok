@@ -5,6 +5,8 @@ VisualStudioVersion = 17.13.35605.110 d17.13
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PGrokClient", "PGrokClient\PGrokClient.csproj", "{B36F92F4-795A-7107-979E-8B5D2897E84A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PGrok", "PGrok\PGrok.csproj", "{792C2FF7-598B-A5BF-A39D-FEC5472337DD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{B36F92F4-795A-7107-979E-8B5D2897E84A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B36F92F4-795A-7107-979E-8B5D2897E84A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B36F92F4-795A-7107-979E-8B5D2897E84A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{792C2FF7-598B-A5BF-A39D-FEC5472337DD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{792C2FF7-598B-A5BF-A39D-FEC5472337DD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{792C2FF7-598B-A5BF-A39D-FEC5472337DD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{792C2FF7-598B-A5BF-A39D-FEC5472337DD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
