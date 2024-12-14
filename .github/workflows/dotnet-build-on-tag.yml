@@ -24,7 +24,7 @@ jobs:
       || startsWith(github.ref, 'refs/tags/')
     defaults:
       run:
-        working-directory: ./src
+        working-directory: ./PGrokClient
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -42,7 +42,6 @@ jobs:
 
     - name: Build and Pack
       run: |
-        cd PGrokClient
         dotnet build --configuration Release /p:Version=$TAG_NAME /p:AssemblyVersion=$TAG_NAME /p:FileVersion=$TAG_NAME
         dotnet pack --configuration Release /p:PackageVersion=$TAG_NAME /p:Version=$TAG_NAME /p:AssemblyVersion=$TAG_NAME /p:FileVersion=$TAG_NAME --output nupkgs
 
@@ -50,16 +49,16 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: packages
-        path: PGrokClient/nupkgs/*.nupkg
+        path: nupkgs/*.nupkg
 
     - name: Push NuGet Package
       run: |
-        dotnet nuget push PGrokClient/nupkgs/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
+        dotnet nuget push nupkgs/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
 
     # - name: Create GitHub Release
     #   id: create_release
     #   uses: softprops/action-gh-release@v2
     #   with:
-    #     files: PGrokClient/nupkgs/*.nupkg
+    #     files: nupkgs/*.nupkg
     #     generate_release_notes: true
 
