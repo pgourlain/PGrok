@@ -17,6 +17,7 @@
 		<PackageProjectUrl>https://github.com/pgourlain/pgrok</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/pgourlain/pgrok</RepositoryUrl>
 		<PackageTags>dotnet-tool;utility</PackageTags>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -27,6 +28,7 @@
 
 	<ItemGroup>
 		<Folder Include="Common\" />
+		<None Include="README.md" Pack="true" PackagePath="\"/>
 	</ItemGroup>
 
 	<ItemGroup>
