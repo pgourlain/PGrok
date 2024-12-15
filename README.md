@@ -32,7 +32,9 @@ available switches with environment variables :
 - PGROK_LOCALHOST
     - list on localhost only, used in debug mode
 - PGROK_SINGLE_TUNNEL
-    - activate single tunnel mode. It means that only one client will be accepted
+    - activate single tunnel mode on http. It means that only one client will be accepted
+- PGROK_TCPPORT
+    - port to listen for tcp, switch to tcp mode if specified   
 
 ## Server installation using executable only
 
@@ -59,13 +61,10 @@ pgrok start --tunnelId svc1 --localAddress http://localhost:5066 --serverAddress
 ```
 
 
-
 # Limitations
 
-Only http calls can be redirected
-
-On client side :
-- Calling another service (in ACA) from local is not yet implemented.
+On client side, in http mode :
+- if your local service want to call another service in ACA environment is not yet implemented.
 
 on server side :
 - server as dotnet tool is not yet implemented
