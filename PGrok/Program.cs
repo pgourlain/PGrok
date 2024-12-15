@@ -23,8 +23,9 @@ app.Configure(config => {
 
     config.SetApplicationName("pgrok-server");
     config.AddCommand<ServerStartCommand>("start")
-        .WithDescription("Start the client")
-        .WithExample(new[] { "start --port=8080 --localhost" });
+        .WithDescription("Start the server in http mode")
+        .WithExample(new[] { "start --port=8080 --localhost" })
+        .WithExample(new[] { "start --port=8080 --tcpPort=3306 --localhost" });
 });
 app.SetDefaultCommand<ServerStartCommand>();
 // Run the application

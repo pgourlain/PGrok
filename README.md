@@ -69,3 +69,4 @@ On client side :
 
 on server side :
 - server as dotnet tool is not yet implemented
+- /$status is a reserved url for monitoring and cannot be change yet

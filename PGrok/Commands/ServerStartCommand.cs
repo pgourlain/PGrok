@@ -27,9 +27,19 @@ namespace PGrok.Commands
 
         public override async Task<int> ExecuteAsync(CommandContext context, ServerSettings settings)
         {
-            var server = new HttpTunnelServer(logger, settings.Port ?? 8080, settings.useLocalhost ?? false, settings.useSingleTunnel ?? false);
-            await server.Start();
-            return 0;
+            if (settings.TcpPort is not null)
+            {
+                int tcp = (int)settings.TcpPort;
+                var server = new TcpTunnelServer(logger, settings.Port ?? 8080, tcp, settings.useLocalhost ?? false);
+                await server.Start();
+                return 0;
+            }
+            else
+            {
+                var server = new HttpTunnelServer(logger, settings.Port ?? 8080, settings.useLocalhost ?? false, settings.useSingleTunnel ?? false);
+                await server.Start();
+                return 0;
+            }
         }
     }
 }

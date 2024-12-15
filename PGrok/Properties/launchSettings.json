@@ -4,7 +4,8 @@
       "commandName": "Project",
       "environmentVariables": {
         "PGROK_LOCALHOST": "true",
-        "PGROK_SINGLE_TUNNEL": "true"
+        "PGROK_SINGLE_TUNNEL": "true",
+        "PGROK_TCPPORT": "3307"
       }
     },
     "Container (Dockerfile)": {

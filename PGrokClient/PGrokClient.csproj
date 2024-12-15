@@ -23,6 +23,7 @@
 	<ItemGroup>
 		<Compile Include="..\PGrok\Common\TunnelRequest.cs" Link="Common\TunnelRequest.cs" />
 		<Compile Include="..\PGrok\Common\TunnelResponse.cs" Link="Common\TunnelResponse.cs" />
+		<Compile Include="..\PGrok\Common\TunnelTcpMessage.cs" Link="Common\TunnelTcpMessage.cs" />
 		<Compile Include="..\PGrok\Common\WebSocketHelpers.cs" Link="Common\WebSocketHelpers.cs" />
 		<Compile Include="..\PGrok\Services\CustomConsoleFormatter.cs" Link="Services\CustomConsoleFormatter.cs" />
 		<Compile Include="..\PGrok\Services\TypeRegistrar.cs" Link="Services\TypeRegistrar.cs" />

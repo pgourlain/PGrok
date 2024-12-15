@@ -15,7 +15,6 @@ namespace PGrok.Commands
         [Description("The port to listen. 8080 is use if not provided.")]
         public int? Port { get; set; }
 
-
         [CommandOption("-l| --localhost")]
         [Description("Use localhost instead of")]
         public bool? useLocalhost { get; set; }
@@ -23,6 +22,10 @@ namespace PGrok.Commands
         [CommandOption("-s| --singleTunnel")]
         [Description("Use single tunnel. Useful for service replacement")]
         public bool? useSingleTunnel { get; set; }
+
+        [CommandOption("-t| --tcpPort")]
+        [Description("The port to listen. Switch to tcp mode when specified")]
+        public int? TcpPort { get; set; }
 
         public override ValidationResult Validate()
         {
@@ -49,6 +52,19 @@ namespace PGrok.Commands
                 {
                     this.useSingleTunnel = singleTunnel;
                 }
+            }
+            if (TcpPort is null)
+            {
+                var tcpPortEV = System.Environment.GetEnvironmentVariable("PGROK_TCPPORT");
+                if (int.TryParse(tcpPortEV, out int tcpPort))
+                {
+                    this.TcpPort = tcpPort;
+                }
+            }
+
+            if (TcpPort is not null && TcpPort < 1)
+            {
+                return ValidationResult.Error("tcpPort must be greater than 0.");
             }
             return base.Validate();
         }

@@ -2,7 +2,7 @@
   "profiles": {
     "PGrokClient": {
       "commandName": "Project",
-      "commandLineArgs": "start --tunnelId svc1 --localAddress http://localhost:5066 --serverAddress http://localhost:8080 --"
+      "commandLineArgs": "start-tcp --tunnelId svc1 --localAddress localhost:3306 --serverAddress http://localhost:8080"
     }
   }
 }
