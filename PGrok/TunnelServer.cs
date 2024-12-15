@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using PGrok.Common.Helpers;
 using PGrok.Common.Models;
 
@@ -12,20 +13,24 @@ public class HttpTunnelServer
 {
     private class TunnelConnection
     {
-        public WebSocket WebSocket { get; set; }
-        public TaskCompletionSource<string> ResponseWaiter { get; set; }
-        public CancellationTokenSource CancellationToken { get; set; }
+        public required WebSocket WebSocket { get; set; }
+        public required TaskCompletionSource<string> ResponseWaiter { get; set; }
+        public required CancellationTokenSource CancellationToken { get; set; }
     }
 
     private readonly HttpListener _listener;
     private readonly ConcurrentDictionary<string, TunnelConnection> _tunnels;
+    private readonly ILogger _logger;
     private readonly int _port;
     private readonly bool _uselocalhost;
+    private readonly bool _useSingleTunnel;
 
-    public HttpTunnelServer(int port = 80, bool uselocalhost = false)
+    public HttpTunnelServer(ILogger logger, int port = 80, bool uselocalhost = false, bool useSingleTunnel = false)
     {
+        this._logger = logger;
         _port = port;
         _uselocalhost = uselocalhost; //for debugging purposes
+        _useSingleTunnel = useSingleTunnel;
         _listener = new HttpListener();
         _tunnels = new ConcurrentDictionary<string, TunnelConnection>();
     }
@@ -36,8 +41,12 @@ public class HttpTunnelServer
         _listener.Prefixes.Add($"http://{host}:{_port}/");
         _listener.Start();
 
-        Console.WriteLine($"Server listening on port {_port}");
-        Console.WriteLine("Ready to accept connections");
+        _logger.LogInformation($"Server listening on port {_port}");
+        if (_useSingleTunnel)
+        {
+            _logger.LogInformation("Single tunnel mode enabled");
+        }
+        _logger.LogInformation("Ready to accept connections");
 
         while (true)
         {
@@ -67,9 +76,13 @@ public class HttpTunnelServer
                 context.Response.Close();
             }
         }
-        else if (!string.IsNullOrEmpty(tunnelId))
+        else if (path == "$status")
         {
-            await HandleHttpRequest(context, tunnelId);
+            await SendHomePage(context);
+        }
+        else if ((!_useSingleTunnel && !string.IsNullOrEmpty(tunnelId)) || _useSingleTunnel)
+        {
+            await HandleHttpRequest(context, _useSingleTunnel ? string.Empty : tunnelId);
         }
         else
         {
@@ -135,8 +148,7 @@ public class HttpTunnelServer
                 return;
             }
 
-            var tunnelConnection = new TunnelConnection
-            {
+            var tunnelConnection = new TunnelConnection {
                 WebSocket = wsContext.WebSocket,
                 ResponseWaiter = new TaskCompletionSource<string>(),
                 CancellationToken = new CancellationTokenSource()
@@ -144,7 +156,7 @@ public class HttpTunnelServer
 
             if (_tunnels.TryAdd(tunnelId, tunnelConnection))
             {
-                Console.WriteLine($"New tunnel registered: {tunnelId}");
+                _logger.LogInformation($"New tunnel registered: {tunnelId}");
                 await ProcessTunnelMessages(tunnelId, tunnelConnection);
             }
             else
@@ -158,7 +170,7 @@ public class HttpTunnelServer
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error in tunnel connection: {ex.Message}");
+            _logger.LogError($"Error in tunnel connection: {ex.Message}");
         }
     }
 
@@ -201,20 +213,20 @@ public class HttpTunnelServer
         {
             if (inner.NativeErrorCode != 995) //The I/O operation has been aborted because of either a thread exit or an application request.
             {
-                Console.WriteLine($"Error processing tunnel messages: {ex.Message}");
+                _logger.LogError($"Error processing tunnel messages: {ex.Message}");
             }
             connection.ResponseWaiter.TrySetException(ex);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error processing tunnel messages: {ex.Message}");
+            _logger.LogError($"Error processing tunnel messages: {ex.Message}");
             connection.ResponseWaiter.TrySetException(ex);
         }
         finally
         {
             if (_tunnels.TryRemove(tunnelId, out var _))
             {
-                Console.WriteLine($"Tunnel closed: {tunnelId}");
+                _logger.LogInformation($"Tunnel closed: {tunnelId}");
             }
             connection.CancellationToken.Cancel();
 
@@ -230,7 +242,7 @@ public class HttpTunnelServer
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Error closing WebSocket: {ex.Message}");
+                    _logger.LogError($"Error closing WebSocket: {ex.Message}");
                 }
             }
         }
@@ -238,11 +250,20 @@ public class HttpTunnelServer
 
     private async Task HandleHttpRequest(HttpListenerContext context, string tunnelId)
     {
-        if (!_tunnels.TryGetValue(tunnelId, out var tunnel))
+        TunnelConnection? tunnel = null;
+
+        if (!_useSingleTunnel)
+        {
+            _tunnels.TryGetValue(tunnelId, out tunnel);
+        }
+        else if (_tunnels.Count > 0)
+        {
+            tunnel = _tunnels.FirstOrDefault().Value;
+        }
+        if (tunnel == null)
         {
             context.Response.StatusCode = 404;
-            var message = JsonSerializer.Serialize(new
-            {
+            var message = JsonSerializer.Serialize(new {
                 error = "Tunnel Not Found",
                 message = $"No tunnel found for service: {tunnelId}",
                 availableTunnels = _tunnels.Keys.ToList()
@@ -256,8 +277,7 @@ public class HttpTunnelServer
 
         try
         {
-            var request = new TunnelRequest
-            {
+            var request = new TunnelRequest {
                 Method = context.Request.HttpMethod,
                 Url = context.Request.Url?.ToString() ?? string.Empty,
                 Headers = HttpHelpers.GetHeaders(context.Request),
@@ -269,7 +289,7 @@ public class HttpTunnelServer
 
             await WebSocketHelpers.SendStringAsync(tunnel.WebSocket, requestJson);
 
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
             try
             {
                 var responseJson = await tunnel.ResponseWaiter.Task.WaitAsync(cts.Token);
@@ -296,8 +316,7 @@ public class HttpTunnelServer
             catch (OperationCanceledException)
             {
                 context.Response.StatusCode = 504;
-                var message = JsonSerializer.Serialize(new
-                {
+                var message = JsonSerializer.Serialize(new {
                     error = "Gateway Timeout",
                     message = "The tunnel client did not respond in time",
                     tunnelId = tunnelId
@@ -309,10 +328,9 @@ public class HttpTunnelServer
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error handling HTTP request: {ex.Message}");
+            _logger.LogError($"Error handling HTTP request: {ex.Message}");
             context.Response.StatusCode = 500;
-            var message = JsonSerializer.Serialize(new
-            {
+            var message = JsonSerializer.Serialize(new {
                 error = "Internal Server Error",
                 message = "An error occurred while processing the request",
                 details = ex.Message
