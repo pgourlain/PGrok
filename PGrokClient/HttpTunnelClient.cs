@@ -66,6 +66,11 @@ public class HttpTunnelClient
         while (ws.State == WebSocketState.Open && !_cts.Token.IsCancellationRequested)
         {
             var message = await WebSocketHelpers.ReceiveStringAsync(ws, _cts.Token);
+            if (ws.State == WebSocketState.CloseReceived && ws.CloseStatus == WebSocketCloseStatus.PolicyViolation)
+            {
+                //single mode
+                throw new Exception(ws.CloseStatusDescription);
+            }
             var request = JsonSerializer.Deserialize<TunnelRequest>(message);
 
             if (request == null)
