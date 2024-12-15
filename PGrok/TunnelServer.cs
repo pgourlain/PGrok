@@ -92,6 +92,11 @@ public class HttpTunnelServer
 
     private async Task SendHomePage(HttpListenerContext context)
     {
+        var mode = string.Empty;
+        if (_useSingleTunnel)
+        {
+            mode = "Single tunnel mode is activated.";
+        }
         var html = new StringBuilder()
             .AppendLine("<!DOCTYPE html>")
             .AppendLine("<html>")
@@ -106,6 +111,7 @@ public class HttpTunnelServer
             .AppendLine("    </style>")
             .AppendLine("</head>")
             .AppendLine("<body>")
+            .AppendLine($"    <b>{mode}</b>")
             .AppendLine("    <h1>PGrok Active Tunnels</h1>");
 
         if (_tunnels.IsEmpty)
@@ -148,7 +154,7 @@ public class HttpTunnelServer
                 return;
             }
 
-            if (_useSingleTunnel && _tunnels.Count > 0)
+            if (_useSingleTunnel && !_tunnels.IsEmpty)
             {
                 await wsContext.WebSocket.CloseAsync(
                     WebSocketCloseStatus.PolicyViolation,
