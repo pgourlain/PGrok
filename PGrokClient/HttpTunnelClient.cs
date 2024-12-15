@@ -91,23 +91,27 @@ public class HttpTunnelClient
     {
         try
         {
-            var uri = new Uri(request.Url);
+            var uri = new Uri(request.Url!);
             var segments = uri.AbsolutePath.Split(new[] { $"/{_tunnelId}/" }, 2, StringSplitOptions.None);
             var localPath = segments.Length > 1 ? segments[1] : "";
 
             var localUrl = $"{_localUrl}/{localPath}{uri.Query}";
 
-            using var httpRequest = new HttpRequestMessage {
-                Method = new HttpMethod(request.Method),
+            using var httpRequest = new HttpRequestMessage
+            {
+                Method = new HttpMethod(request.Method!),
                 RequestUri = new Uri(localUrl)
             };
 
             // Copy headers
-            foreach (var (key, value) in request.Headers)
+            if (request.Headers != null)
             {
-                if (!key.StartsWith(":") && key.ToLower() is not ("host" or "connection"))
+                foreach (var (key, value) in request.Headers)
                 {
-                    httpRequest.Headers.TryAddWithoutValidation(key, value);
+                    if (!key.StartsWith(":") && key.ToLower() is not ("host" or "connection"))
+                    {
+                        httpRequest.Headers.TryAddWithoutValidation(key, value);
+                    }
                 }
             }
 
@@ -115,7 +119,7 @@ public class HttpTunnelClient
             if (!string.IsNullOrEmpty(request.Body))
             {
                 httpRequest.Content = new StringContent(request.Body);
-                if (request.Headers.TryGetValue("Content-Type", out var contentType))
+                if (request.Headers!=null && request.Headers.TryGetValue("Content-Type", out var contentType))
                 {
                     httpRequest.Content.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse(contentType);
                 }
@@ -125,7 +129,8 @@ public class HttpTunnelClient
 
             var response = await _httpClient.SendAsync(httpRequest);
 
-            return new TunnelResponse {
+            return new TunnelResponse
+            {
                 StatusCode = (int)response.StatusCode,
                 Headers = response.Headers.ToDictionary(h => h.Key, h => string.Join(",", h.Value)),
                 Body = await response.Content.ReadAsStringAsync()
@@ -150,7 +155,8 @@ public class HttpTunnelClient
 
     private static TunnelResponse CreateErrorResponse(int statusCode, string error, string message, string details)
     {
-        return new TunnelResponse {
+        return new TunnelResponse
+        {
             StatusCode = statusCode,
             Headers = new Dictionary<string, string> { { "Content-Type", "application/json" } },
             Body = JsonSerializer.Serialize(new { error, message, details })

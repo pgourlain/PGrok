@@ -20,8 +20,22 @@ namespace PGrokClient.Commands
         }
         public override ValidationResult Validate(CommandContext context, ClientSettings settings)
         {
+            if (string.IsNullOrWhiteSpace(settings.TunnelId))
+            {
+                return ValidationResult.Error("tunnelId must be specified. It represents the service that you want to redirect to local.");
+            }   
+            if (string.IsNullOrWhiteSpace(settings.ServerAddress))
+            {
+                return ValidationResult.Error("serverAddress must be specified.");
+            }   
+            if (string.IsNullOrWhiteSpace(settings.LocalAddress))
+            {
+                return ValidationResult.Error("localAddress must be specified. it's local url use to redirect call from remote server (specified by serverAddress).");
+            }   
+
             return base.Validate(context, settings);
         }
+
         public override async Task<int> ExecuteAsync(CommandContext context, ClientSettings settings)
         {
             var client = new HttpTunnelClient(settings.ServerAddress!, settings.TunnelId!, settings.LocalAddress!);

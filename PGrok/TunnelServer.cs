@@ -135,7 +135,8 @@ public class HttpTunnelServer
                 return;
             }
 
-            var tunnelConnection = new TunnelConnection {
+            var tunnelConnection = new TunnelConnection
+            {
                 WebSocket = wsContext.WebSocket,
                 ResponseWaiter = new TaskCompletionSource<string>(),
                 CancellationToken = new CancellationTokenSource()
@@ -196,7 +197,7 @@ public class HttpTunnelServer
                 }
             }
         }
-        catch(WebSocketException ex) when (ex.InnerException is HttpListenerException inner)
+        catch (WebSocketException ex) when (ex.InnerException is HttpListenerException inner)
         {
             if (inner.NativeErrorCode != 995) //The I/O operation has been aborted because of either a thread exit or an application request.
             {
@@ -240,7 +241,8 @@ public class HttpTunnelServer
         if (!_tunnels.TryGetValue(tunnelId, out var tunnel))
         {
             context.Response.StatusCode = 404;
-            var message = JsonSerializer.Serialize(new {
+            var message = JsonSerializer.Serialize(new
+            {
                 error = "Tunnel Not Found",
                 message = $"No tunnel found for service: {tunnelId}",
                 availableTunnels = _tunnels.Keys.ToList()
@@ -254,7 +256,8 @@ public class HttpTunnelServer
 
         try
         {
-            var request = new TunnelRequest {
+            var request = new TunnelRequest
+            {
                 Method = context.Request.HttpMethod,
                 Url = context.Request.Url?.ToString() ?? string.Empty,
                 Headers = HttpHelpers.GetHeaders(context.Request),
@@ -275,9 +278,12 @@ public class HttpTunnelServer
                 if (response != null)
                 {
                     context.Response.StatusCode = response.StatusCode;
-                    foreach (var (key, value) in response.Headers)
+                    if (response.Headers != null)
                     {
-                        context.Response.Headers.Add(key, value);
+                        foreach (var (key, value) in response.Headers)
+                        {
+                            context.Response.Headers.Add(key, value);
+                        }
                     }
 
                     if (!string.IsNullOrEmpty(response.Body))
@@ -290,7 +296,8 @@ public class HttpTunnelServer
             catch (OperationCanceledException)
             {
                 context.Response.StatusCode = 504;
-                var message = JsonSerializer.Serialize(new {
+                var message = JsonSerializer.Serialize(new
+                {
                     error = "Gateway Timeout",
                     message = "The tunnel client did not respond in time",
                     tunnelId = tunnelId
@@ -304,7 +311,8 @@ public class HttpTunnelServer
         {
             Console.WriteLine($"Error handling HTTP request: {ex.Message}");
             context.Response.StatusCode = 500;
-            var message = JsonSerializer.Serialize(new {
+            var message = JsonSerializer.Serialize(new
+            {
                 error = "Internal Server Error",
                 message = "An error occurred while processing the request",
                 details = ex.Message
