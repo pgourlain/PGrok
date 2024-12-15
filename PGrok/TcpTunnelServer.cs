@@ -36,19 +36,17 @@ public class TcpTunnelServer
     public async Task Start()
     {
         var host = _useLocalhost ? "localhost" : "+";
-        // Start WebSocket listener for tunnel client connection
         _webSocketListener.Prefixes.Add($"http://{host}:{_webSocketPort}/");
         _webSocketListener.Start();
         _logger.LogInformation($"WebSocket server started on port {_webSocketPort}");
 
-        // Start TCP listener for incoming connections to forward
         _tcpListener.Start();
         _logger.LogInformation($"TCP listener started on port {_targetPort}");
 
-        // Start both listening tasks
         var webSocketTask = HandleWebSocketConnections();
         var tcpTask = HandleTcpConnections();
         _logger.LogInformation("Ready to accept connections");
+
         await Task.WhenAll(webSocketTask, tcpTask);
     }
 
@@ -60,20 +58,43 @@ public class TcpTunnelServer
             {
                 var context = await _webSocketListener.GetContextAsync();
 
-                // If there's already a client connected, reject new connections
-                if (_clientWebSocket != null &&
-                    _clientWebSocket.State == WebSocketState.Open)
+                if (_clientWebSocket != null && _clientWebSocket.State == WebSocketState.Open)
                 {
-                    context.Response.StatusCode = 409; // Conflict
+                    context.Response.StatusCode = 409;
                     context.Response.Close();
                     continue;
                 }
 
-                await HandleWebSocketClientAsync(context);
+                if (!context.Request.IsWebSocketRequest)
+                {
+                    context.Response.StatusCode = 400;
+                    context.Response.Close();
+                    continue;
+                }
+
+                var wsContext = await context.AcceptWebSocketAsync(null);
+                _clientWebSocket = wsContext.WebSocket;
+                _logger.LogInformation("Tunnel client connected");
+
+                try
+                {
+                    await ProcessWebSocketMessages(_clientWebSocket);
+                }
+                finally
+                {
+                    _clientWebSocket = null;
+                    _logger.LogInformation("Tunnel client disconnected");
+
+                    foreach (var conn in _tcpConnections)
+                    {
+                        conn.Value.Close();
+                    }
+                    _tcpConnections.Clear();
+                }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error accepting WebSocket connection");
+                _logger.LogError(ex, "Error handling WebSocket connection");
             }
         }
     }
@@ -86,9 +107,7 @@ public class TcpTunnelServer
             {
                 var tcpClient = await _tcpListener.AcceptTcpClientAsync(_cts.Token);
 
-                // Only accept TCP connections if we have a connected client
-                if (_clientWebSocket == null ||
-                    _clientWebSocket.State != WebSocketState.Open)
+                if (_clientWebSocket == null || _clientWebSocket.State != WebSocketState.Open)
                 {
                     _logger.LogWarning("No tunnel client connected. Rejecting TCP connection.");
                     tcpClient.Close();
@@ -104,37 +123,6 @@ public class TcpTunnelServer
         }
     }
 
-    private async Task HandleWebSocketClientAsync(HttpListenerContext context)
-    {
-        if (!context.Request.IsWebSocketRequest)
-        {
-            context.Response.StatusCode = 400;
-            context.Response.Close();
-            return;
-        }
-
-        var wsContext = await context.AcceptWebSocketAsync(null);
-        _clientWebSocket = wsContext.WebSocket;
-        _logger.LogInformation("Tunnel client connected");
-
-        try
-        {
-            await ProcessWebSocketMessages(_clientWebSocket);
-        }
-        finally
-        {
-            _clientWebSocket = null;
-            _logger.LogInformation("Tunnel client disconnected");
-
-            // Clean up any remaining TCP connections
-            foreach (var conn in _tcpConnections)
-            {
-                conn.Value.Close();
-            }
-            _tcpConnections.Clear();
-        }
-    }
-
     private async Task HandleTcpClientAsync(TcpClient tcpClient)
     {
         var connectionId = Guid.NewGuid().ToString();
@@ -144,29 +132,37 @@ public class TcpTunnelServer
         {
             _logger.LogInformation($"New TCP connection: {connectionId}");
 
+            // Envoyer le message d'initialisation au client
+            var initMessage = new TunnelTcpMessage {
+                Type = "init",
+                ConnectionId = connectionId,
+                Data = null
+            };
+
+            await SendWebSocketMessage(initMessage);
+
             using var stream = tcpClient.GetStream();
-            // Configuration de la socket pour une meilleure performance
-            tcpClient.NoDelay = true;  // Désactive l'algorithme de Nagle
+            var buffer = new byte[8192];
 
-            var buffer = new byte[65536];
-
-            while (!_cts.Token.IsCancellationRequested)
+            // Tâche de lecture TCP
+            var readTask = Task.Run(async () =>
             {
-                var bytesRead = await stream.ReadAsync(buffer, _cts.Token);
-                if (bytesRead == 0)
+                while (!_cts.Token.IsCancellationRequested)
                 {
-                    _logger.LogDebug($"Connection {connectionId} closed by client");
-                    break;
+                    var bytesRead = await stream.ReadAsync(buffer, _cts.Token);
+                    if (bytesRead == 0) break;
+
+                    var message = new TunnelTcpMessage {
+                        Type = "data",
+                        ConnectionId = connectionId,
+                        Data = Convert.ToBase64String(buffer, 0, bytesRead)
+                    };
+
+                    await SendWebSocketMessage(message);
                 }
+            });
 
-                var message = new TunnelTcpMessage {
-                    Type = "data",
-                    ConnectionId = connectionId,
-                    Data = Convert.ToBase64String(buffer, 0, bytesRead)
-                };
-
-                await SendWebSocketMessage(message);
-            }
+            await readTask;
         }
         catch (Exception ex)
         {
@@ -174,28 +170,34 @@ public class TcpTunnelServer
         }
         finally
         {
+            // Envoyer un message de fermeture au client
+            var closeMessage = new TunnelTcpMessage {
+                Type = "close",
+                ConnectionId = connectionId,
+                Data = null
+            };
+
+            await SendWebSocketMessage(closeMessage);
+
             _tcpConnections.Remove(connectionId);
             tcpClient.Close();
-            _logger.LogInformation($"Connection {connectionId} closed");
         }
     }
-
     private async Task ProcessWebSocketMessages(WebSocket webSocket)
     {
-        var buffer = new byte[4096];
+        var buffer = new byte[8192];
 
         while (webSocket.State == WebSocketState.Open && !_cts.Token.IsCancellationRequested)
         {
             try
             {
-                using var ms = new MemoryStream();
                 WebSocketReceiveResult result;
+                using var ms = new MemoryStream();
 
                 do
                 {
-                    result = await webSocket.ReceiveAsync(
-                        new ArraySegment<byte>(buffer),
-                        _cts.Token);
+                    result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), _cts.Token);
+                    if (result.MessageType == WebSocketMessageType.Close) return;
                     await ms.WriteAsync(buffer.AsMemory(0, result.Count));
                 }
                 while (!result.EndOfMessage);
@@ -217,12 +219,16 @@ public class TcpTunnelServer
             {
                 break;
             }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing WebSocket message");
+                break;
+            }
         }
     }
 
     private async Task HandleTunnelMessage(TunnelTcpMessage message)
     {
-        // Handle responses from tunnel client
         if (message.Type == "data" && !string.IsNullOrEmpty(message.ConnectionId))
         {
             if (_tcpConnections.TryGetValue(message.ConnectionId, out var tcpClient))
@@ -243,7 +249,6 @@ public class TcpTunnelServer
         }
 
         var json = JsonSerializer.Serialize(message);
-        var bytes = Encoding.UTF8.GetBytes(json);
         await WebSocketHelpers.SendStringAsync(_clientWebSocket, json, _cts.Token);
     }
 

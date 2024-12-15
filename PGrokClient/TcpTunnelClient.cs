@@ -44,8 +44,9 @@ public class TcpTunnelClient
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Connection error");
-                await Task.Delay(5000, _cts.Token); // Attendre avant de réessayer
+                _logger.LogWarning($"Connection error: {ex.Message}");
+                _logger.LogWarning("Retrying in 5 seconds...");
+                await Task.Delay(5000, _cts.Token);
             }
         }
     }
@@ -105,7 +106,7 @@ public class TcpTunnelClient
         }
         catch (WebSocketException ex) 
         {
-            _logger.LogError("WebSocket error : {0}", ex);
+            _logger.LogError($"WebSocket error : {ex.Message}");
         }
     }
 
@@ -113,13 +114,48 @@ public class TcpTunnelClient
     {
         switch (message.Type)
         {
+            case "init":
+                _logger.LogInformation($"New connection initialization: {message.ConnectionId}");
+                await HandleInitMessage(ws, message);
+                break;
+
             case "data":
-                _logger.LogInformation("handle data message");
                 await HandleDataMessage(ws, message);
                 break;
+
+            case "close":
+                _logger.LogInformation($"Closing connection: {message.ConnectionId}");
+                CloseConnection(message.ConnectionId);
+                break;
+
             case "control":
                 await HandleControlMessage(ws, message);
                 break;
+        }
+    }
+
+    private async Task HandleInitMessage(WebSocket ws, TunnelTcpMessage message)
+    {
+        try
+        {
+            var tcpClient = new TcpClient();
+            await tcpClient.ConnectAsync(_localHost, _localPort);
+            _connections[message.ConnectionId] = tcpClient;
+            _logger.LogInformation($"Local connection established for {message.ConnectionId}");
+
+            // Démarrer la lecture des réponses TCP immédiatement
+            _ = ProcessTcpResponses(ws, message.ConnectionId, tcpClient);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Failed to establish local connection for {message.ConnectionId}");
+            // Informer le serveur de l'échec
+            var errorMessage = new TunnelTcpMessage {
+                Type = "error",
+                ConnectionId = message.ConnectionId,
+                Data = ex.Message
+            };
+            await SendWebSocketMessage(ws, errorMessage);
         }
     }
 
@@ -127,30 +163,31 @@ public class TcpTunnelClient
     {
         if (string.IsNullOrEmpty(message.Data)) return;
 
-        TcpClient? tcpClient;
-
-        // Créer ou récupérer la connexion TCP
-        if (!_connections.TryGetValue(message.ConnectionId, out tcpClient))
+        if (_connections.TryGetValue(message.ConnectionId, out var tcpClient))
         {
-            tcpClient = new TcpClient();
-            await tcpClient.ConnectAsync(_localHost, _localPort);
-            _connections[message.ConnectionId] = tcpClient;
-
-            // Démarrer la lecture des réponses TCP
-            _ = ProcessTcpResponses(ws, message.ConnectionId, tcpClient);
+            try
+            {
+                var data = Convert.FromBase64String(message.Data);
+                var stream = tcpClient.GetStream();
+                await stream.WriteAsync(data);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error writing to local connection {message.ConnectionId}");
+                CloseConnection(message.ConnectionId);
+            }
         }
-
-        // Envoyer les données au service local
-        var data = Convert.FromBase64String(message.Data);
-        var stream = tcpClient.GetStream();
-        await stream.WriteAsync(data);
+        else
+        {
+            _logger.LogWarning($"Received data for unknown connection: {message.ConnectionId}");
+        }
     }
 
     private async Task ProcessTcpResponses(WebSocket ws, string connectionId, TcpClient tcpClient)
     {
         try
         {
-            var buffer = new byte[4096];
+            var buffer = new byte[8192]; // Augmenté à 8KB pour de meilleures performances
             var stream = tcpClient.GetStream();
 
             while (tcpClient.Connected && !_cts.Token.IsCancellationRequested)
@@ -166,6 +203,10 @@ public class TcpTunnelClient
 
                 await SendWebSocketMessage(ws, message);
             }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error reading from local connection {connectionId}");
         }
         finally
         {
