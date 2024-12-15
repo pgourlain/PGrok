@@ -68,6 +68,7 @@ public class HttpTunnelClient
             var message = await WebSocketHelpers.ReceiveStringAsync(ws, _cts.Token);
             if (ws.State == WebSocketState.CloseReceived && ws.CloseStatus == WebSocketCloseStatus.PolicyViolation)
             {
+                await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, _cts.Token);
                 //single mode
                 throw new Exception(ws.CloseStatusDescription);
             }
