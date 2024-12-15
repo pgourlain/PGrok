@@ -2,7 +2,10 @@
   "profiles": {
     "PGrok": {
       "commandName": "Project",
-      "commandLineArgs": "--localhost -s"
+      "environmentVariables": {
+        "PGROK_LOCALHOST": "true",
+        "PGROK_SINGLE_TUNNEL": "true"
+      }
     },
     "Container (Dockerfile)": {
       "commandName": "Docker"

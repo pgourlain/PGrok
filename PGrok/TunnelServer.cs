@@ -148,6 +148,16 @@ public class HttpTunnelServer
                 return;
             }
 
+            if (_useSingleTunnel && _tunnels.Count > 0)
+            {
+                await wsContext.WebSocket.CloseAsync(
+                    WebSocketCloseStatus.PolicyViolation,
+                    "Single tunnel mode enabled and there one active tunnel",
+                    CancellationToken.None
+                );
+                return;
+            }
+
             var tunnelConnection = new TunnelConnection {
                 WebSocket = wsContext.WebSocket,
                 ResponseWaiter = new TaskCompletionSource<string>(),
