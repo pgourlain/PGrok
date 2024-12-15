@@ -20,6 +20,11 @@ namespace PGrokClient.Commands
         }
         public override ValidationResult Validate(CommandContext context, ClientSettings settings)
         {
+            if (IsVersionCommand(context))
+            {
+                return base.Validate(context, settings);
+            }
+
             if (string.IsNullOrWhiteSpace(settings.TunnelId))
             {
                 return ValidationResult.Error("tunnelId must be specified. It represents the service that you want to redirect to local.");
@@ -38,9 +43,24 @@ namespace PGrokClient.Commands
 
         public override async Task<int> ExecuteAsync(CommandContext context, ClientSettings settings)
         {
+            if (IsVersionCommand(context))
+            {
+                DisplayVersion();
+                return 0;
+            }
             var client = new HttpTunnelClient(settings.ServerAddress!, settings.TunnelId!, settings.LocalAddress!, logger);
             await client.Start();
             return 0;
+        }
+
+        private bool IsVersionCommand(CommandContext context)
+        {
+            return context.Arguments.Count == 1 && (context.Arguments[0] is ("-v" or "--version"));
+        }
+        private void DisplayVersion()
+        {
+            AnsiConsole.MarkupLine($"[bold]PGrok Client[/]");
+            AnsiConsole.MarkupLine($"Version: {typeof(ClientStartCommand).Assembly.GetName().Version}");
         }
     }
 }

@@ -28,7 +28,7 @@ For both modes, there is only one docker image => ghcr.io/pgourlain/pgrok:latest
 
 ## Check server installation
 
-after deploying server, open in browser url of ingress (example https://pgrok--xxxx.xxxxxx.westeurope.azurecontainerapps.io/$)
+after deploying server, open in browser url of ingress (example https://pgrok--xxxx.xxxxxx.westeurope.azurecontainerapps.io/$status)
 
 
 ## Client installation
@@ -37,7 +37,11 @@ after deploying server, open in browser url of ingress (example https://pgrok--x
 dotnet tool install --global pgrok-client
 ```
 
+## Start client
 
+```shell
+pgrok 
+```
 
 
 
