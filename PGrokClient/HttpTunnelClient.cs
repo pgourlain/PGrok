@@ -3,6 +3,7 @@
 using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using PGrok.Common.Helpers;
 using PGrok.Common.Models;
 
@@ -12,14 +13,16 @@ public class HttpTunnelClient
 {
     private readonly string _serverUrl;
     private readonly string _tunnelId;
+    private readonly ILogger _logger;
     private readonly string _localUrl;
     private readonly HttpClient _httpClient;
     private readonly CancellationTokenSource _cts;
 
-    public HttpTunnelClient(string serverUrl, string tunnelId, string localUrl)
+    public HttpTunnelClient(string serverUrl, string tunnelId, string localUrl, ILogger logger)
     {
         _serverUrl = serverUrl;
         _tunnelId = tunnelId;
+        _logger = logger;
         _localUrl = localUrl.TrimEnd('/');
         _httpClient = new HttpClient();
         _cts = new CancellationTokenSource();
@@ -27,9 +30,9 @@ public class HttpTunnelClient
 
     public async Task Start()
     {
-        Console.WriteLine($"Starting tunnel client for service {_tunnelId}");
-        Console.WriteLine($"Server: {_serverUrl}");
-        Console.WriteLine($"Local service: {_localUrl}");
+        _logger.LogInformation($"Starting tunnel client for service {_tunnelId}");
+        _logger.LogInformation($"Server: {_serverUrl}");
+        _logger.LogInformation($"Local service: {_localUrl}");
 
         while (!_cts.Token.IsCancellationRequested)
         {
@@ -39,8 +42,8 @@ public class HttpTunnelClient
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Connection error: {ex.Message}");
-                Console.WriteLine("Retrying in 5 seconds...");
+                _logger.LogWarning($"Connection error: {ex.Message}");
+                _logger.LogWarning("Retrying in 5 seconds...");
                 await Task.Delay(5000, _cts.Token);
             }
         }
@@ -51,9 +54,9 @@ public class HttpTunnelClient
         using var ws = new ClientWebSocket();
         var wsUrl = $"{_serverUrl.Replace("https://", "wss://").Replace("http://", "ws://")}/tunnel?id={_tunnelId}";
 
-        Console.WriteLine($"Connecting to {wsUrl}...");
+        _logger.LogInformation($"Connecting to {wsUrl}...");
         await ws.ConnectAsync(new Uri(wsUrl), _cts.Token);
-        Console.WriteLine("Connected successfully!");
+        _logger.LogInformation("Connected successfully!");
 
         await ProcessMessages(ws);
     }
@@ -67,7 +70,7 @@ public class HttpTunnelClient
 
             if (request == null)
             {
-                Console.WriteLine("Received invalid request");
+                _logger.LogWarning("Received invalid request");
                 continue;
             }
 
@@ -82,7 +85,7 @@ public class HttpTunnelClient
                 var errorResponse = TunnelResponse.FromException(ex);
                 var errorJson = JsonSerializer.Serialize(errorResponse);
                 await WebSocketHelpers.SendStringAsync(ws, errorJson, _cts.Token);
-                Console.WriteLine($"Error processing request: {ex.Message}");
+                _logger.LogError($"Error processing request: {ex.Message}");
             }
         }
     }
@@ -93,7 +96,7 @@ public class HttpTunnelClient
         {
             var uri = new Uri(request.Url!);
             var segments = uri.AbsolutePath.Split(new[] { $"/{_tunnelId}/" }, 2, StringSplitOptions.None);
-            var localPath = segments.Length > 1 ? segments[1] : "";
+            var localPath = segments.Length > 1 ? segments[1] : segments[0].TrimStart('/');
 
             var localUrl = $"{_localUrl}/{localPath}{uri.Query}";
 
@@ -125,7 +128,7 @@ public class HttpTunnelClient
                 }
             }
 
-            Console.WriteLine($"Forwarding request: {request.Method} {localUrl}");
+            _logger.LogInformation($"Forwarding request: {request.Method} {localUrl}");
 
             var response = await _httpClient.SendAsync(httpRequest);
 
@@ -138,17 +141,17 @@ public class HttpTunnelClient
         }
         catch (HttpRequestException ex)
         {
-            Console.WriteLine($"HTTP Request error: {ex.Message}");
+            _logger.LogError($"HTTP Request error: {ex.Message}");
             return CreateErrorResponse(503, "Service Unavailable", "The local service is not responding", ex.Message);
         }
         catch (UriFormatException ex)
         {
-            Console.WriteLine($"Invalid URL format: {ex.Message}");
+            _logger.LogError($"Invalid URL format: {ex.Message}");
             return CreateErrorResponse(400, "Bad Request", "Invalid URL format", ex.Message);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Unexpected error: {ex.Message}");
+            _logger.LogError($"Unexpected error: {ex.Message}");
             return CreateErrorResponse(500, "Internal Server Error", "An unexpected error occurred", ex.Message);
         }
     }

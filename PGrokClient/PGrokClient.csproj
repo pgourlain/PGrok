@@ -24,19 +24,23 @@
 		<Compile Include="..\PGrok\Common\TunnelRequest.cs" Link="Common\TunnelRequest.cs" />
 		<Compile Include="..\PGrok\Common\TunnelResponse.cs" Link="Common\TunnelResponse.cs" />
 		<Compile Include="..\PGrok\Common\WebSocketHelpers.cs" Link="Common\WebSocketHelpers.cs" />
+		<Compile Include="..\PGrok\Services\CustomConsoleFormatter.cs" Link="Services\CustomConsoleFormatter.cs" />
+		<Compile Include="..\PGrok\Services\TypeRegistrar.cs" Link="Services\TypeRegistrar.cs" />
+		<Compile Include="..\PGrok\Services\TypeResolver.cs" Link="Services\TypeResolver.cs" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<Folder Include="Common\" />
-		<None Include="README.md" Pack="true" PackagePath="\"/>
+		<Folder Include="Services\" />
+		<None Include="README.md" Pack="true" PackagePath="\" />
 	</ItemGroup>
 
 	<ItemGroup>
 	  <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
 	  <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.0" />
 	  <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
+	  <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.0" />
 	  <PackageReference Include="Spectre.Console.Cli" Version="0.49.1" />
-	  <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
 	</ItemGroup>
 
 </Project>

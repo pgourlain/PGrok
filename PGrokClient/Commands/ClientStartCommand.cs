@@ -38,7 +38,7 @@ namespace PGrokClient.Commands
 
         public override async Task<int> ExecuteAsync(CommandContext context, ClientSettings settings)
         {
-            var client = new HttpTunnelClient(settings.ServerAddress!, settings.TunnelId!, settings.LocalAddress!);
+            var client = new HttpTunnelClient(settings.ServerAddress!, settings.TunnelId!, settings.LocalAddress!, logger);
             await client.Start();
             return 0;
         }

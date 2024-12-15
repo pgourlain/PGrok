@@ -3,13 +3,13 @@
 ## Installation
 
 ```shell
-dotnet tool install --global pgrokclient
+dotnet tool install --global pgrok-client
 ```
 
 ## Update
 
 ```shell
-dotnet tool install --global pgrokclient
+dotnet tool install --global pgrok-client
 ```
 
 
@@ -22,5 +22,5 @@ pgrok -h
 ## Uninstall
 
 ```shell
-dotnet tool uninstall --global pgrokclient
+dotnet tool uninstall --global pgrok-client
 ```
