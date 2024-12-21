@@ -1,4 +1,5 @@
-﻿using Spectre.Console.Cli;
+﻿using PGrok.Commands;
+using Spectre.Console.Cli;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -21,5 +22,10 @@ namespace PGrokClient.Commands
         [CommandOption("-l| --localAddress")]
         [Description("The local address to use for calls redirections. Specify http(s)://my_local_url")]
         public string? LocalAddress { get; set; }
+
+        [CommandOption("-r| --proxyPort")]
+        [Description("Listen on this port to proxy calls to serverAddress.")]
+        public int? ProxyPort { get; set; }
+
     }
 }

@@ -1,4 +1,5 @@
-﻿using Spectre.Console;
+﻿using PGrok.Commands;
+using Spectre.Console;
 using Spectre.Console.Cli;
 using System;
 using System.Collections.Generic;
@@ -7,7 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace PGrok.Commands
+namespace PGrok.Server.Commands
 {
     public class ServerSettings : LogCommandSettings
     {
@@ -27,38 +28,51 @@ namespace PGrok.Commands
         [Description("The port to listen. Switch to tcp mode when specified")]
         public int? TcpPort { get; set; }
 
+        [CommandOption("-r| --proxyPort")]
+        [Description("The port use to call local services. all services should listen on this port")]
+        public int? ProxyPort { get; set; }
+
         public override ValidationResult Validate()
         {
             if (Port is null)
             {
-                var portEV = System.Environment.GetEnvironmentVariable("PGROK_PORT");
+                var portEV = Environment.GetEnvironmentVariable("PGROK_PORT");
                 if (int.TryParse(portEV, out int port))
                 {
-                    this.Port = port;
+                    Port = port;
                 }
             }
             if (useLocalhost is null)
             {
-                var localhostEV = System.Environment.GetEnvironmentVariable("PGROK_LOCALHOST");
+                var localhostEV = Environment.GetEnvironmentVariable("PGROK_LOCALHOST");
                 if (bool.TryParse(localhostEV, out bool localhost))
                 {
-                    this.useLocalhost = localhost;
+                    useLocalhost = localhost;
                 }
             }
             if (useSingleTunnel is null)
             {
-                var singleTunnelEV = System.Environment.GetEnvironmentVariable("PGROK_SINGLE_TUNNEL");
+                var singleTunnelEV = Environment.GetEnvironmentVariable("PGROK_SINGLE_TUNNEL");
                 if (bool.TryParse(singleTunnelEV, out bool singleTunnel))
                 {
-                    this.useSingleTunnel = singleTunnel;
+                    useSingleTunnel = singleTunnel;
                 }
             }
             if (TcpPort is null)
             {
-                var tcpPortEV = System.Environment.GetEnvironmentVariable("PGROK_TCPPORT");
+                var tcpPortEV = Environment.GetEnvironmentVariable("PGROK_TCPPORT");
                 if (int.TryParse(tcpPortEV, out int tcpPort))
                 {
-                    this.TcpPort = tcpPort;
+                    TcpPort = tcpPort;
+                }
+            }
+
+            if (ProxyPort is null)
+            {
+                var proxyPortEV = Environment.GetEnvironmentVariable("PGROK_PROXYPORT");
+                if (int.TryParse(proxyPortEV, out int proxyPort))
+                {
+                    ProxyPort = proxyPort;
                 }
             }
 

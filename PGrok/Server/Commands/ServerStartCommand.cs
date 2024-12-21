@@ -1,22 +1,24 @@
 ﻿using Microsoft.Extensions.Logging;
-using PGrok.Server;
 using Spectre.Console;
 using Spectre.Console.Cli;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace PGrok.Commands
+namespace PGrok.Server.Commands
 {
     internal class ServerStartCommand : AsyncCommand<ServerSettings>
     {
         private readonly ILogger<ServerStartCommand> logger;
+        private readonly IHttpClientFactory _httpClientFactory;
 
-        public ServerStartCommand(ILogger<ServerStartCommand> logger)
+        public ServerStartCommand(ILogger<ServerStartCommand> logger, IHttpClientFactory httpClientFactory)
         {
             this.logger = logger;
+            _httpClientFactory = httpClientFactory;
         }
 
         public override ValidationResult Validate(CommandContext context, ServerSettings settings)
@@ -36,7 +38,8 @@ namespace PGrok.Commands
             }
             else
             {
-                var server = new HttpTunnelServer(logger, settings.Port ?? 8080, settings.useLocalhost ?? false, settings.useSingleTunnel ?? false);
+                var server = new HttpTunnelServer(logger, _httpClientFactory, settings.Port ?? 8080, settings.useLocalhost ?? false,
+                        settings.useSingleTunnel ?? false, settings.ProxyPort ?? 8080);
                 await server.Start();
                 return 0;
             }

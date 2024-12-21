@@ -87,13 +87,12 @@ public class TcpTunnelClient
 
     private async Task ReceiveWebSocketMessages(WebSocket ws)
     {
-        var buffer = new byte[4096];
-
+        using var ms = new MemoryStream();
         try
         {
             while (ws.State == WebSocketState.Open && !_cts.Token.IsCancellationRequested)
             {
-                var message = await WebSocketHelpers.ReceiveStringAsync(ws, _cts.Token);
+                var message = await WebSocketHelpers.ReceiveStringAsync(ws, ms, _cts.Token);
                 var tcpMessage = JsonSerializer.Deserialize<TunnelTcpMessage>(message);
 
                 if (tcpMessage != null)

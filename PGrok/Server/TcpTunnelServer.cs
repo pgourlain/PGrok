@@ -60,15 +60,13 @@ public class TcpTunnelServer
 
                 if (_clientWebSocket != null && _clientWebSocket.State == WebSocketState.Open)
                 {
-                    context.Response.StatusCode = 409;
-                    context.Response.Close();
+                    await context.Response.HandleXXX("Only one client connection is allowed", 409, true);
                     continue;
                 }
 
                 if (!context.Request.IsWebSocketRequest)
                 {
-                    context.Response.StatusCode = 400;
-                    context.Response.Close();
+                    await context.Response.HandleXXX(null, 400, true);
                     continue;
                 }
 

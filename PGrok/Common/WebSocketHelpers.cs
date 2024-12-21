@@ -5,11 +5,10 @@ namespace PGrok.Common.Helpers;
 
 public static class WebSocketHelpers
 {
-    public static async Task<string> ReceiveStringAsync(WebSocket webSocket, CancellationToken cancellationToken = default)
+    public static async Task<string> ReceiveStringAsync(WebSocket webSocket, MemoryStream ms,  CancellationToken cancellationToken = default)
     {
         var buffer = new byte[4096];
-        using var ms = new MemoryStream();
-
+        ms.SetLength(0);
         while (true)
         {
             var result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), cancellationToken);
@@ -20,7 +19,7 @@ public static class WebSocketHelpers
             if (result.EndOfMessage)
                 break;
         }
-
+        ms.Seek(0, SeekOrigin.Begin);
         return Encoding.UTF8.GetString(ms.ToArray());
     }
 

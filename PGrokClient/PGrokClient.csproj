@@ -21,23 +21,34 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<Compile Include="..\PGrok\Common\TunnelRequest.cs" Link="Common\TunnelRequest.cs" />
-		<Compile Include="..\PGrok\Common\TunnelResponse.cs" Link="Common\TunnelResponse.cs" />
-		<Compile Include="..\PGrok\Common\TunnelTcpMessage.cs" Link="Common\TunnelTcpMessage.cs" />
-		<Compile Include="..\PGrok\Common\WebSocketHelpers.cs" Link="Common\WebSocketHelpers.cs" />
-		<Compile Include="..\PGrok\Services\CustomConsoleFormatter.cs" Link="Services\CustomConsoleFormatter.cs" />
-		<Compile Include="..\PGrok\Services\TypeRegistrar.cs" Link="Services\TypeRegistrar.cs" />
-		<Compile Include="..\PGrok\Services\TypeResolver.cs" Link="Services\TypeResolver.cs" />
+	  <Compile Include="..\PGrok\Client\Commands\ClientSettings.cs" Link="ClientSettings.cs" />
+	  <Compile Include="..\PGrok\Client\Commands\ClientStartCommand.cs" Link="ClientStartCommand.cs" />
+	  <Compile Include="..\PGrok\Client\Commands\ClientTcpStartCommand.cs" Link="ClientTcpStartCommand.cs" />
+	  <Compile Include="..\PGrok\Client\HttpTunnelClient.cs" Link="HttpTunnelClient.cs" />
+	  <Compile Include="..\PGrok\Client\TcpTunnelClient.cs" Link="TcpTunnelClient.cs" />
+	  <Compile Include="..\PGrok\Commands\LogCommandSettings.cs" Link="LogCommandSettings.cs" />
+	  <Compile Include="..\PGrok\Common\HttpHelpers.cs" Link="HttpHelpers.cs" />
+	  <Compile Include="..\PGrok\Common\TunnelRequest.cs" Link="TunnelRequest.cs" />
+	  <Compile Include="..\PGrok\Common\TunnelResponse.cs" Link="TunnelResponse.cs" />
+	  <Compile Include="..\PGrok\Common\TunnelTcpMessage.cs" Link="TunnelTcpMessage.cs" />
+	  <Compile Include="..\PGrok\Common\WebSocketHelpers.cs" Link="WebSocketHelpers.cs" />
+	  <Compile Include="..\PGrok\Program.cs" Link="Program.cs" />
+	  <Compile Include="..\PGrok\Server\Commands\ServerSettings.cs" Link="ServerSettings.cs" />
+	  <Compile Include="..\PGrok\Server\Commands\ServerStartCommand.cs" Link="ServerStartCommand.cs" />
+	  <Compile Include="..\PGrok\Server\HttpTunnelServer.cs" Link="HttpTunnelServer.cs" />
+	  <Compile Include="..\PGrok\Server\TcpTunnelServer.cs" Link="TcpTunnelServer.cs" />
+	  <Compile Include="..\PGrok\Services\CustomConsoleFormatter.cs" Link="CustomConsoleFormatter.cs" />
+	  <Compile Include="..\PGrok\Services\TypeRegistrar.cs" Link="TypeRegistrar.cs" />
+	  <Compile Include="..\PGrok\Services\TypeResolver.cs" Link="TypeResolver.cs" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<Folder Include="Common\" />
-		<Folder Include="Services\" />
 		<None Include="README.md" Pack="true" PackagePath="\" />
 	</ItemGroup>
 
 	<ItemGroup>
 	  <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
+	  <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.0" />
 	  <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.0" />
 	  <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
 	  <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.0" />
