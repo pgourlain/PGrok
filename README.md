@@ -8,7 +8,17 @@ The concept is to install a wrapper in the environment that redirects calls to y
 
 # Global architecture
 
+The idea was :
+
+![architecture](docs/original_idea.png)
+
+### HTTP scenario :
+
 ![architecture](docs/Archi20241214.png)
+
+### TCP scenario :
+
+coming soon
 
 
 # Installation
@@ -35,17 +45,24 @@ available switches with environment variables :
     - activate single tunnel mode on http. It means that only one client will be accepted
 - PGROK_TCPPORT
     - port to listen for tcp, switch to tcp mode if specified   
+- PGROK_PROXYPORT
+    - port to use to call other local services on server side, default is 8080    
 
 ## Server installation using executable only
 
-1) download source code, 
-2) goto 'PGrok' folder
-3) dotnet run 
+client dotnet tool can be setup to run as server
 
+```shell
+dotnet tool install --global pgrok-client
+# example 
+pgrok start-server --localhost --proxyPort=5067 
+```
 
 ## Check server installation
 
 after deploying server, open in browser url of ingress (example https://pgrok--xxxx.xxxxxx.westeurope.azurecontainerapps.io/$status)
+
+if launch on localhost : browse http://localhost:8080/$status
 
 
 ## Client installation
@@ -61,11 +78,7 @@ pgrok start --tunnelId svc1 --localAddress http://localhost:5066 --serverAddress
 ```
 
 
-# Limitations
-
-On client side, in http mode :
-- if your local service want to call another service in ACA environment is not yet implemented.
+# Known limitations
 
 on server side :
-- server as dotnet tool is not yet implemented
 - /$status is a reserved url for monitoring and cannot be change yet

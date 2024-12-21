@@ -2,10 +2,11 @@
   "profiles": {
     "PGrok": {
       "commandName": "Project",
+      "commandLineArgs": "start-server",
       "environmentVariables": {
         "PGROK_LOCALHOST": "true",
         "PGROK_SINGLE_TUNNEL": "true",
-        "PGROK_TCPPORT": "3307"
+        "PGROK_TCPPORT": "null"
       }
     },
     "Container (Dockerfile)": {

@@ -24,15 +24,20 @@ public class HttpTunnelServer
     private readonly int _port;
     private readonly bool _uselocalhost;
     private readonly bool _useSingleTunnel;
+    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly int _proxyPort;
 
-    public HttpTunnelServer(ILogger logger, int port = 80, bool uselocalhost = false, bool useSingleTunnel = false)
+    public HttpTunnelServer(ILogger logger, IHttpClientFactory httpClientFactory, int port = 80, bool uselocalhost = false, bool useSingleTunnel = false, int proxyPort = 8080)
     {
         this._logger = logger;
         _port = port;
         _uselocalhost = uselocalhost; //for debugging purposes
         _useSingleTunnel = useSingleTunnel;
         _listener = new HttpListener();
+        //each pgrok-client connection will be stored in this dictionary
         _tunnels = new ConcurrentDictionary<string, TunnelConnection>();
+        _httpClientFactory = httpClientFactory;
+        _proxyPort = proxyPort;
     }
 
     public async Task Start()
@@ -46,6 +51,7 @@ public class HttpTunnelServer
         {
             _logger.LogInformation("Single tunnel mode enabled");
         }
+        _logger.LogInformation($"Server dispatch http calls from clients on port {_proxyPort}");
         _logger.LogInformation("Ready to accept connections");
 
         while (true)
@@ -69,11 +75,7 @@ public class HttpTunnelServer
             }
             else
             {
-                context.Response.StatusCode = 400;
-                var message = "WebSocket connection required";
-                var buffer = Encoding.UTF8.GetBytes(message);
-                await context.Response.OutputStream.WriteAsync(buffer);
-                context.Response.Close();
+                await context.Response.Handle400("WebSocket connection required");
             }
         }
         else if (path == "$status")
@@ -131,10 +133,8 @@ public class HttpTunnelServer
         html.AppendLine("</body>")
             .AppendLine("</html>");
 
-        var buffer = Encoding.UTF8.GetBytes(html.ToString());
         context.Response.ContentType = "text/html";
-        await context.Response.OutputStream.WriteAsync(buffer);
-        context.Response.Close();
+        await context.Response.HandleXXX(html.ToString(), 200, true);    
     }
 
     private async Task HandleTunnelConnection(HttpListenerContext context)
@@ -194,33 +194,38 @@ public class HttpTunnelServer
     {
         try
         {
-            var buffer = new byte[4096];
-            var ms = new MemoryStream();
+            using var ms = new MemoryStream();
 
             while (connection.WebSocket.State == WebSocketState.Open)
             {
-                ms.SetLength(0);
-                WebSocketReceiveResult result;
+                var response = await WebSocketHelpers.ReceiveStringAsync(connection.WebSocket, ms, connection.CancellationToken.Token);
 
-                do
+                if (response?.StartsWith("$dispatch$") == true)
                 {
-                    result = await connection.WebSocket.ReceiveAsync(
-                        new ArraySegment<byte>(buffer),
-                        connection.CancellationToken.Token
-                    );
+                    //Call api on local server content is request
 
-                    if (result.MessageType == WebSocketMessageType.Close)
-                        return;
+                    var request = JsonSerializer.Deserialize<TunnelRequest>(response.AsSpan(10));
+                    if (request == null || string.IsNullOrWhiteSpace(request.Url))
+                    {
+                        _logger.LogWarning("Received invalid dispatch request");
+                        continue;
+                    }
+                    var path = new Uri(request.Url).AbsolutePath.TrimStart('/') ?? string.Empty;
+                    var segments = path.Split('/', 2, StringSplitOptions.RemoveEmptyEntries);
+                    var serviceId = segments[0];
 
-                    await ms.WriteAsync(buffer.AsMemory(0, result.Count), connection.CancellationToken.Token);
+                    var httpResponse = await HttpHelpers.ForwardRequestToLocalService(request, serviceId, $"http://{serviceId}:{_proxyPort}", _httpClientFactory.CreateClient(), _logger, "pgrok-server:");
+                    if (request.RequestId != null)
+                    {
+                        httpResponse.Headers ??= new Dictionary<string, string>();
+                        httpResponse.Headers.Add(HttpHelpers.RequestIdHeader, request.RequestId ?? string.Empty);
+                    }
+                    var httpResponseData = "$dispatchresponse$" + JsonSerializer.Serialize(httpResponse);
+                    await WebSocketHelpers.SendStringAsync(connection.WebSocket, httpResponseData);
                 }
-                while (!result.EndOfMessage);
-
-                if (result.MessageType == WebSocketMessageType.Text)
+                else
                 {
-                    ms.Seek(0, SeekOrigin.Begin);
-                    var response = Encoding.UTF8.GetString(ms.ToArray());
-                    connection.ResponseWaiter.TrySetResult(response);
+                    connection.ResponseWaiter.TrySetResult(response!);
                     connection.ResponseWaiter = new TaskCompletionSource<string>();
                 }
             }
@@ -278,16 +283,13 @@ public class HttpTunnelServer
         }
         if (tunnel == null)
         {
-            context.Response.StatusCode = 404;
             var message = JsonSerializer.Serialize(new {
                 error = "Tunnel Not Found",
                 message = $"No tunnel found for service: {tunnelId}",
                 availableTunnels = _tunnels.Keys.ToList()
             });
             context.Response.ContentType = "application/json";
-            var buffer = Encoding.UTF8.GetBytes(message);
-            await context.Response.OutputStream.WriteAsync(buffer);
-            context.Response.Close();
+            await context.Response.HandleXXX(message, 400, true);            
             return;
         }
 
@@ -311,49 +313,30 @@ public class HttpTunnelServer
                 var responseJson = await tunnel.ResponseWaiter.Task.WaitAsync(cts.Token);
                 var response = JsonSerializer.Deserialize<TunnelResponse>(responseJson);
 
-                if (response != null)
-                {
-                    context.Response.StatusCode = response.StatusCode;
-                    if (response.Headers != null)
-                    {
-                        foreach (var (key, value) in response.Headers)
-                        {
-                            context.Response.Headers.Add(key, value);
-                        }
-                    }
-
-                    if (!string.IsNullOrEmpty(response.Body))
-                    {
-                        var buffer = Encoding.UTF8.GetBytes(response.Body);
-                        await context.Response.OutputStream.WriteAsync(buffer);
-                    }
-                }
+                await context.Response.HandleResponse(response, false);
             }
             catch (OperationCanceledException)
             {
-                context.Response.StatusCode = 504;
                 var message = JsonSerializer.Serialize(new {
                     error = "Gateway Timeout",
                     message = "The tunnel client did not respond in time",
                     tunnelId = tunnelId
                 });
                 context.Response.ContentType = "application/json";
-                var buffer = Encoding.UTF8.GetBytes(message);
-                await context.Response.OutputStream.WriteAsync(buffer);
+                await context.Response.HandleXXX(message, 504);
             }
         }
         catch (Exception ex)
         {
             _logger.LogError($"Error handling HTTP request: {ex.Message}");
-            context.Response.StatusCode = 500;
+
             var message = JsonSerializer.Serialize(new {
                 error = "Internal Server Error",
                 message = "An error occurred while processing the request",
                 details = ex.Message
             });
             context.Response.ContentType = "application/json";
-            var buffer = Encoding.UTF8.GetBytes(message);
-            await context.Response.OutputStream.WriteAsync(buffer);
+            await context.Response.HandleXXX(message, 500);
         }
         finally
         {
