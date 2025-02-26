@@ -5,18 +5,19 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
+using BinaryReader = System.IO.BinaryReader;
 
 namespace PGrok.Common.Helpers;
 
 public static class HttpHelpers
 {
     public const string RequestIdHeader = "X-PGrok-RequestId";
-    public static async Task<string?> GetRequestBodyAsync(HttpListenerRequest request)
+    public static Task<byte[]?> GetRequestBodyAsync(HttpListenerRequest request)
     {
         if (!request.HasEntityBody) return null;
 
-        using var reader = new StreamReader(request.InputStream);
-        return await reader.ReadToEndAsync();
+        using var reader = new BinaryReader(request.InputStream);
+        return Task.FromResult(reader.ReadBytes(int.MaxValue))!;
     }
 
     public static Dictionary<string, string> GetHeaders(HttpListenerRequest request)
@@ -62,10 +63,9 @@ public static class HttpHelpers
                 response.Headers[key] = value;
             }
         }
-        if (!string.IsNullOrEmpty(tunnelResponse.Body))
+        if (tunnelResponse.Body != null)
         {
-            var buffer = Encoding.UTF8.GetBytes(tunnelResponse.Body);
-            await response.OutputStream.WriteAsync(buffer);
+            await response.OutputStream.WriteAsync(tunnelResponse.Body);
         }
         if (closeStream)
         {
@@ -102,9 +102,9 @@ public static class HttpHelpers
             }
 
             // Add body if present
-            if (!string.IsNullOrEmpty(request.Body))
+            if (request.Body != null)
             {
-                httpRequest.Content = new StringContent(request.Body);
+                httpRequest.Content = new ByteArrayContent(request.Body);
                 if (request.Headers != null && request.Headers.TryGetValue("Content-Type", out var contentType))
                 {
                     httpRequest.Content.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse(contentType);
@@ -118,7 +118,7 @@ public static class HttpHelpers
             return new TunnelResponse {
                 StatusCode = (int)response.StatusCode,
                 Headers = response.Headers.ToDictionary(h => h.Key, h => string.Join(",", h.Value)),
-                Body = await response.Content.ReadAsStringAsync()
+                Body = await response.Content.ReadAsByteArrayAsync()
             };
         }
         catch (HttpRequestException ex)
@@ -142,7 +142,7 @@ public static class HttpHelpers
         return new TunnelResponse {
             StatusCode = statusCode,
             Headers = new Dictionary<string, string> { { "Content-Type", "application/json" } },
-            Body = JsonSerializer.Serialize(new { error, message, details })
+            Body = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new { error, message, details }))
         };
     }
 }

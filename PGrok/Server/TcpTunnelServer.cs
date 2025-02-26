@@ -58,7 +58,7 @@ public class TcpTunnelServer
             {
                 var context = await _webSocketListener.GetContextAsync();
 
-                if (_clientWebSocket != null && _clientWebSocket.State == WebSocketState.Open)
+                if (_clientWebSocket is { State: WebSocketState.Open })
                 {
                     await context.Response.HandleXXX("Only one client connection is allowed", 409, true);
                     continue;

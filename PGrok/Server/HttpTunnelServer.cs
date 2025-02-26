@@ -137,6 +137,11 @@ public class HttpTunnelServer
         await context.Response.HandleXXX(html.ToString(), 200, true);    
     }
 
+    /// <summary>
+    /// handle all websocket connections from pgrokclient
+    /// </summary>
+    /// <param name="context"></param>
+    /// <returns></returns>
     private async Task HandleTunnelConnection(HttpListenerContext context)
     {
         try
@@ -269,6 +274,11 @@ public class HttpTunnelServer
         }
     }
 
+    /// <summary>
+    /// handle all call from browsers or clients
+    /// </summary>
+    /// <param name="context"></param>
+    /// <param name="tunnelId"></param>
     private async Task HandleHttpRequest(HttpListenerContext context, string tunnelId)
     {
         TunnelConnection? tunnel = null;
