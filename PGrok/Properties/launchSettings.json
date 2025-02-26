@@ -2,7 +2,7 @@
   "profiles": {
     "PGrok": {
       "commandName": "Project",
-      "commandLineArgs": "start-server",
+      "commandLineArgs": "start-server --debug",
       "environmentVariables": {
         "PGROK_LOCALHOST": "true",
         "PGROK_SINGLE_TUNNEL": "true",

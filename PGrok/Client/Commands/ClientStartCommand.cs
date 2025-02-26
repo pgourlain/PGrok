@@ -49,7 +49,7 @@ namespace PGrokClient.Commands
                 return 0;
             }
             var client = new HttpTunnelClient(settings.ServerAddress!, settings.TunnelId!, settings.LocalAddress!, settings.ProxyPort, logger);
-            await client.Start();
+            await client.StartAsync();
             return 0;
         }
 

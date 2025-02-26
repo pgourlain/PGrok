@@ -1,15 +1,28 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Text.Json.Serialization;
+
 namespace PGrok.Common.Models;
 
 public class TunnelRequest
 {
+    [JsonPropertyName("requestId")]
     public string? RequestId { get; set; }
-    public string? Method { get; set; }
-    public string? Url { get; set; }
-    public Dictionary<string, string>? Headers { get; set; }
+
+    [JsonPropertyName("method")]
+    public string Method { get; set; } = string.Empty;
+
+    [JsonPropertyName("url")]
+    public string Url { get; set; } = string.Empty;
+
+    [JsonPropertyName("headers")]
+    public Dictionary<string, string> Headers { get; set; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+    [JsonPropertyName("body")]
     public byte[]? Body { get; set; }
+
+    [JsonPropertyName("isWebSocketRequest")]
+    public bool IsWebSocketRequest { get; set; } = false;
+
+    [JsonPropertyName("isBlazorRequest")]
+    public bool IsBlazorRequest { get; set; } = false;
+
 }
