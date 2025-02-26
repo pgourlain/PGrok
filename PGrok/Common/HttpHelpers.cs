@@ -14,7 +14,7 @@ public static class HttpHelpers
     public const string RequestIdHeader = "X-PGrok-RequestId";
     public static Task<byte[]?> GetRequestBodyAsync(HttpListenerRequest request)
     {
-        if (!request.HasEntityBody) return null;
+        if (!request.HasEntityBody) return Task.FromResult<byte[]?>(null);
 
         using var reader = new BinaryReader(request.InputStream);
         return Task.FromResult(reader.ReadBytes(int.MaxValue))!;
