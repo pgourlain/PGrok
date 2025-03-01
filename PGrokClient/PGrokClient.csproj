@@ -32,11 +32,18 @@
 	  <Compile Include="..\PGrok\Common\TunnelResponse.cs" Link="TunnelResponse.cs" />
 	  <Compile Include="..\PGrok\Common\TunnelTcpMessage.cs" Link="TunnelTcpMessage.cs" />
 	  <Compile Include="..\PGrok\Common\WebSocketHelpers.cs" Link="WebSocketHelpers.cs" />
+	  <Compile Include="..\PGrok\Common\WebSocketRelayMessage.cs" Link="WebSocketRelayMessage.cs" />
+	  <Compile Include="..\PGrok\Monitoring\TunnelMonitoringService.cs" Link="TunnelMonitoringService.cs" />
 	  <Compile Include="..\PGrok\Program.cs" Link="Program.cs" />
+	  <Compile Include="..\PGrok\Security\HttpSecurityExtensions.cs" Link="HttpSecurityExtensions.cs" />
+	  <Compile Include="..\PGrok\Security\RateLimitInfo.cs" Link="RateLimitInfo.cs" />
+	  <Compile Include="..\PGrok\Security\TunnelAuthenticationService.cs" Link="TunnelAuthenticationService.cs" />
+	  <Compile Include="..\PGrok\Security\TunnelClient.cs" Link="TunnelClient.cs" />
 	  <Compile Include="..\PGrok\Server\Commands\ServerSettings.cs" Link="ServerSettings.cs" />
 	  <Compile Include="..\PGrok\Server\Commands\ServerStartCommand.cs" Link="ServerStartCommand.cs" />
 	  <Compile Include="..\PGrok\Server\HttpTunnelServer.cs" Link="HttpTunnelServer.cs" />
 	  <Compile Include="..\PGrok\Server\TcpTunnelServer.cs" Link="TcpTunnelServer.cs" />
+	  <Compile Include="..\PGrok\Server\WebSocketTunnel.cs" Link="WebSocketTunnel.cs" />
 	  <Compile Include="..\PGrok\Services\CustomConsoleFormatter.cs" Link="CustomConsoleFormatter.cs" />
 	  <Compile Include="..\PGrok\Services\TypeRegistrar.cs" Link="TypeRegistrar.cs" />
 	  <Compile Include="..\PGrok\Services\TypeResolver.cs" Link="TypeResolver.cs" />

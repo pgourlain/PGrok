@@ -5,14 +5,23 @@ using PGrok.Services;
 using Spectre.Console.Cli;
 using PGrok.Server.Commands;
 using PGrokClient.Commands;
+using PGrok.Commands;
 
 IServiceCollection services = new ServiceCollection();
 services.AddLogging(builder => {
-    builder.AddConsole(options => {
+    var loggingBuilder = builder.AddConsole(options => {
         options.FormatterName = "pgrok";
     })
-    .AddConsoleFormatter<CustomConsoleFormatter, ConsoleFormatterOptions>()
-    .SetMinimumLevel(LogLevel.Information);
+    .AddConsoleFormatter<CustomConsoleFormatter, ConsoleFormatterOptions>();
+
+    if (Environment.GetCommandLineArgs().Any(x => x == "--debug"))
+    {
+        loggingBuilder.SetMinimumLevel(LogLevel.Debug);
+    }
+    else
+    {
+        loggingBuilder.SetMinimumLevel(LogLevel.Information);
+    }
 });
 services.AddHttpClient();
 var registrar = new TypeRegistrar(services);
@@ -38,3 +47,5 @@ app.Configure(config => {
 app.SetDefaultCommand<ClientStartCommand>();
 // Run the application
 return await app.RunAsync(args);
+
+

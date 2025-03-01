@@ -1,4 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
+using PGrok.Monitoring;
+using PGrok.Security;
 using Spectre.Console;
 using Spectre.Console.Cli;
 using System;
@@ -38,9 +40,32 @@ namespace PGrok.Server.Commands
             }
             else
             {
-                var server = new HttpTunnelServer(logger, _httpClientFactory, settings.Port ?? 8080, settings.useLocalhost ?? false,
-                        settings.useSingleTunnel ?? false, settings.ProxyPort ?? 8080);
-                await server.Start();
+                var cfg = new PGrok.Server.HttpTunnelServer.ServerConfiguration {
+                    Port = settings.Port ?? 8080,
+                    UseLocalhost = settings.useLocalhost ?? false,
+                    UseSingleTunnel = settings.useSingleTunnel ?? false,
+                    ProxyPort = settings.ProxyPort ?? 8080
+                };
+                var server = new HttpTunnelServer(logger, _httpClientFactory, cfg);
+
+                // Add security if needed
+                var authConfig = new TunnelAuthConfig {
+                    EnableAuthentication = true,
+                    EnableRateLimiting = true,
+                    DefaultRateLimit = 100,
+                    RateLimitWindowSeconds = 60
+                };
+                var authService = new TunnelAuthenticationService(logger, authConfig);
+
+                // Add monitoring
+                var monitoringConfig = new TunnelMonitoringConfig {
+                    EnablePeriodicLogging = true,
+                    LoggingIntervalSeconds = 60,
+                    SlowRequestThresholdSeconds = 5
+                };
+                var monitoringService = new TunnelMonitoringService(logger, monitoringConfig);
+
+                await server.StartAsync();
                 return 0;
             }
         }
