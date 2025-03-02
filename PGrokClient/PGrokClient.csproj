@@ -23,27 +23,12 @@
 	<ItemGroup>
 	  <Compile Include="..\PGrok\Client\Commands\ClientSettings.cs" Link="ClientSettings.cs" />
 	  <Compile Include="..\PGrok\Client\Commands\ClientStartCommand.cs" Link="ClientStartCommand.cs" />
-	  <Compile Include="..\PGrok\Client\Commands\ClientTcpStartCommand.cs" Link="ClientTcpStartCommand.cs" />
-	  <Compile Include="..\PGrok\Client\HttpTunnelClient.cs" Link="HttpTunnelClient.cs" />
-	  <Compile Include="..\PGrok\Client\TcpTunnelClient.cs" Link="TcpTunnelClient.cs" />
+	  <Compile Include="..\PGrok\Client\LocalYARPServer.cs" Link="LocalYARPServer.cs" />
 	  <Compile Include="..\PGrok\Commands\LogCommandSettings.cs" Link="LogCommandSettings.cs" />
-	  <Compile Include="..\PGrok\Common\HttpHelpers.cs" Link="HttpHelpers.cs" />
-	  <Compile Include="..\PGrok\Common\TunnelRequest.cs" Link="TunnelRequest.cs" />
-	  <Compile Include="..\PGrok\Common\TunnelResponse.cs" Link="TunnelResponse.cs" />
-	  <Compile Include="..\PGrok\Common\TunnelTcpMessage.cs" Link="TunnelTcpMessage.cs" />
-	  <Compile Include="..\PGrok\Common\WebSocketHelpers.cs" Link="WebSocketHelpers.cs" />
-	  <Compile Include="..\PGrok\Common\WebSocketRelayMessage.cs" Link="WebSocketRelayMessage.cs" />
-	  <Compile Include="..\PGrok\Monitoring\TunnelMonitoringService.cs" Link="TunnelMonitoringService.cs" />
 	  <Compile Include="..\PGrok\Program.cs" Link="Program.cs" />
-	  <Compile Include="..\PGrok\Security\HttpSecurityExtensions.cs" Link="HttpSecurityExtensions.cs" />
-	  <Compile Include="..\PGrok\Security\RateLimitInfo.cs" Link="RateLimitInfo.cs" />
-	  <Compile Include="..\PGrok\Security\TunnelAuthenticationService.cs" Link="TunnelAuthenticationService.cs" />
-	  <Compile Include="..\PGrok\Security\TunnelClient.cs" Link="TunnelClient.cs" />
 	  <Compile Include="..\PGrok\Server\Commands\ServerSettings.cs" Link="ServerSettings.cs" />
 	  <Compile Include="..\PGrok\Server\Commands\ServerStartCommand.cs" Link="ServerStartCommand.cs" />
-	  <Compile Include="..\PGrok\Server\HttpTunnelServer.cs" Link="HttpTunnelServer.cs" />
-	  <Compile Include="..\PGrok\Server\TcpTunnelServer.cs" Link="TcpTunnelServer.cs" />
-	  <Compile Include="..\PGrok\Server\WebSocketTunnel.cs" Link="WebSocketTunnel.cs" />
+	  <Compile Include="..\PGrok\Server\PublicYARPServer.cs" Link="PublicYARPServer.cs" />
 	  <Compile Include="..\PGrok\Services\CustomConsoleFormatter.cs" Link="CustomConsoleFormatter.cs" />
 	  <Compile Include="..\PGrok\Services\TypeRegistrar.cs" Link="TypeRegistrar.cs" />
 	  <Compile Include="..\PGrok\Services\TypeResolver.cs" Link="TypeResolver.cs" />
@@ -60,6 +45,13 @@
 	  <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
 	  <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.0" />
 	  <PackageReference Include="Spectre.Console.Cli" Version="0.49.1" />
+	  <PackageReference Include="Yarp.ReverseProxy" Version="2.3.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Update="appsettings.json">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </None>
 	</ItemGroup>
 
 </Project>

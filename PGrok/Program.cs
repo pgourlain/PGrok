@@ -40,9 +40,9 @@ app.Configure(config => {
     config.AddCommand<ClientStartCommand>("start")
         .WithDescription("Start the client")
         .WithExample(new[] { "start --tunnelId=1234 --serverAddress=https://pgrok.azurecontainerapps.io --localAddress=http://localhost:5000" });
-    config.AddCommand<ClientTcpStartCommand>("start-tcp")
-        .WithDescription("Start the client on tcp mode")
-        .WithExample(new[] { "start-tcp --tunnelId=1234 --serverAddress=https://pgrok.azurecontainerapps.io --localAddress=localhost:3306" });
+    //config.AddCommand<ClientTcpStartCommand>("start-tcp")
+    //    .WithDescription("Start the client on tcp mode")
+    //    .WithExample(new[] { "start-tcp --tunnelId=1234 --serverAddress=https://pgrok.azurecontainerapps.io --localAddress=localhost:3306" });
 });
 app.SetDefaultCommand<ClientStartCommand>();
 // Run the application

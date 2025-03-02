@@ -48,8 +48,7 @@ namespace PGrokClient.Commands
                 DisplayVersion();
                 return 0;
             }
-            var client = new HttpTunnelClient(settings.ServerAddress!, settings.TunnelId!, settings.LocalAddress!, settings.ProxyPort, logger);
-            await client.StartAsync();
+            LocalYARPServer.Start(settings);
             return 0;
         }
 
