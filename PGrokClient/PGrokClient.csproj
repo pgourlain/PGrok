@@ -23,8 +23,10 @@
 	<ItemGroup>
 	  <Compile Include="..\PGrok\Client\Commands\ClientSettings.cs" Link="ClientSettings.cs" />
 	  <Compile Include="..\PGrok\Client\Commands\ClientStartCommand.cs" Link="ClientStartCommand.cs" />
+	  <Compile Include="..\PGrok\Client\LocalRequestHandler.cs" Link="LocalRequestHandler.cs" />
 	  <Compile Include="..\PGrok\Client\LocalYARPServer.cs" Link="LocalYARPServer.cs" />
 	  <Compile Include="..\PGrok\Commands\LogCommandSettings.cs" Link="LogCommandSettings.cs" />
+	  <Compile Include="..\PGrok\Common\WebSocketHelpers.cs" Link="WebSocketHelpers.cs" />
 	  <Compile Include="..\PGrok\Program.cs" Link="Program.cs" />
 	  <Compile Include="..\PGrok\Server\Commands\ServerSettings.cs" Link="ServerSettings.cs" />
 	  <Compile Include="..\PGrok\Server\Commands\ServerStartCommand.cs" Link="ServerStartCommand.cs" />

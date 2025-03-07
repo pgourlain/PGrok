@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using PGrokClient.Commands;
 using Microsoft.Extensions.Options;
+using PGrok.Common;
 
 
 namespace PGrok.Client
@@ -106,13 +107,12 @@ public class ReverseWebSocketTunnelService : BackgroundService
 
     private async Task ProcessTunnelMessages(ClientWebSocket webSocket, CancellationToken stoppingToken)
     {
-        var buffer = new byte[4096];
+        var buffer = new MemoryStream();
 
         while (webSocket.State == WebSocketState.Open && !stoppingToken.IsCancellationRequested)
         {
             // Receive a message from the public YARP
-            var receiveResult = await webSocket.ReceiveAsync(
-                new ArraySegment<byte>(buffer), stoppingToken);
+            var receiveResult = await webSocket.ReceiveBytesAsync(buffer, stoppingToken);
 
             if (receiveResult.MessageType == WebSocketMessageType.Close)
             {
@@ -123,21 +123,7 @@ public class ReverseWebSocketTunnelService : BackgroundService
                 break;
             }
 
-            // Process the received message
-            // This is where you would:
-            // 1. Parse the message (contains HTTP request details)
-            // 2. Forward the request to your local web server
-            // 3. Get the response
-            // 4. Send the response back through the WebSocket
-
-            // For demonstration purposes, we're just echoing back the message
-            // In a real implementation, you would forward to local web server
-            // using HttpClient or directly via YARP
-            await webSocket.SendAsync(
-                new ArraySegment<byte>(buffer, 0, receiveResult.Count),
-                receiveResult.MessageType,
-                receiveResult.EndOfMessage,
-                stoppingToken);
+            await new LocalRequestHandler(_logger, _options.LocalAddress).HandleRequestAsync(buffer.GetBuffer(), webSocket, stoppingToken);
         }
     }
 }
