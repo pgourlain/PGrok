@@ -10,6 +10,14 @@ using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 
+
+public enum HandleRequestStatus
+{
+    None,
+    Failure,
+    Reconnect,
+    Ok
+}
 // This class would be used in the ProcessTunnelMessages method of the local YARP server
 public class LocalRequestHandler
 {
@@ -26,7 +34,7 @@ public class LocalRequestHandler
         _localWebServerBaseUrl = localUrl ?? "http://localhost:5001";
     }
 
-    public async Task HandleRequestAsync(
+    public async Task<HandleRequestStatus> HandleRequestAsync(
         byte[] messageData,
         WebSocket clientWebSocket,
         CancellationToken cancellationToken)
@@ -36,16 +44,24 @@ public class LocalRequestHandler
             // Deserialize the request from the WebSocket message
             var request = DeserializeRequest(messageData);
 
+            _logger.LogInformation("forward to local api");
             // Forward to local web server
             var response = await ForwardToLocalServerAsync(request, cancellationToken);
 
             // Serialize and send the response back
             var responseData = await SerializeResponseAsync(response);
+            _logger.LogInformation("Send response to Pgrok server, through websocket");
             await clientWebSocket.SendAsync(
                 new ArraySegment<byte>(responseData),
                 WebSocketMessageType.Text,
-                true,
-                cancellationToken);
+                WebSocketMessageFlags.EndOfMessage,
+                cancellationToken).ConfigureAwait(false);
+        }
+        catch(System.Text.Json.JsonException)
+        {
+            //reloop to reconnect to the pgrok server
+            _logger.LogWarning("Error handling tunneled request, so reconnect will occurs.");
+            return HandleRequestStatus.Reconnect;
         }
         catch (Exception ex)
         {
@@ -57,8 +73,10 @@ public class LocalRequestHandler
                 new ArraySegment<byte>(errorResponse),
                 WebSocketMessageType.Text,
                 true,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
+            return HandleRequestStatus.Failure;
         }
+        return HandleRequestStatus.Ok;
     }
 
     private TunneledRequest DeserializeRequest(byte[] data)
@@ -94,7 +112,7 @@ public class LocalRequestHandler
         }
 
         // Send to local server
-        return await _httpClient.SendAsync(httpRequest, cancellationToken);
+        return await _httpClient.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<byte[]> SerializeResponseAsync(HttpResponseMessage response)

@@ -17,7 +17,7 @@ namespace PGrok.Server
 {
     class PublicYARPServer
     {
-        public static void Start(ServerSettings settings)
+        public static Task Start(ServerSettings settings)
         {
             settings.Port ??= 8080;
             var localhost = (settings.useLocalhost ?? false) ? "localhost" : "+";
@@ -147,7 +147,7 @@ namespace PGrok.Server
             // Add standard YARP middleware (as fallback/alternative)
             app.MapReverseProxy();
 
-            app.Run();
+            return app.RunAsync();
 
         }
     }
@@ -193,41 +193,37 @@ namespace PGrok.Server
 
     }
 
-    class TunnelingForwarderHttpClientFactory : ForwarderHttpClientFactory
+    class TunnelingForwarderHttpClientFactory : IForwarderHttpClientFactory
     {
         private readonly TunnelConnectionManager _tunnelManager;
         private readonly ILogger<ForwarderHttpClientFactory> _logger;
+        static long requestId = 0;
 
         public TunnelingForwarderHttpClientFactory(TunnelConnectionManager tunnelManager, 
-            ILogger<ForwarderHttpClientFactory> logger) : base(logger)
+            ILogger<ForwarderHttpClientFactory> logger)
         {
             _logger = logger;
             _tunnelManager = tunnelManager;
         }
 
-        protected override HttpMessageHandler WrapHandler(ForwarderHttpClientContext context, HttpMessageHandler handler)
-        {           
-            if (context.ClusterId == "pgrokclient")
-            {                
-                return new TunnelingMessageHandler(_tunnelManager, _logger);
-            }
-            return base.WrapHandler(context, handler);
+        public HttpMessageInvoker CreateClient(ForwarderHttpClientContext context)
+        {
+            return new TunnelingMessageInvoker(_tunnelManager, _logger);
         }
 
-
-        class TunnelingMessageHandler : HttpMessageHandler
+        class TunnelingMessageInvoker : HttpMessageInvoker
         {
             private readonly TunnelConnectionManager _tunnelManager;
             private WebSocket? tunnel;
             ILogger _logger;
 
-            public TunnelingMessageHandler(TunnelConnectionManager tunnelManager, ILogger logger)
+            public TunnelingMessageInvoker(TunnelConnectionManager tunnelManager, ILogger logger) : base(new TunnelingMessageHandler())
             {
                 _tunnelManager = tunnelManager;
                 _logger = logger;
             }
 
-            protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            public override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
             {
                 if (tunnel == null)
                 {
@@ -239,24 +235,32 @@ namespace PGrok.Server
                     }
                 }
 
+                var currentReqId = Interlocked.Increment(ref requestId);
+                request.Headers.Add("PGROK-ID", currentReqId.ToString());
                 // Serialize the HTTP request to send through the tunnel
                 var requestData = await SerializeHttpRequestAsync(request);
 
+                _logger.LogInformation($"Sending requestID: {currentReqId}");
                 // Send the request through the tunnel
                 await tunnel.SendAsync(
                     new ArraySegment<byte>(requestData),
-                    WebSocketMessageType.Binary,
-                    true,
+                    WebSocketMessageType.Text,
+                    WebSocketMessageFlags.EndOfMessage,
                     CancellationToken.None);
 
                 // Wait for and process the response
+                _logger.LogInformation($"wait for response of requestID: {currentReqId}");
+                using var responseBuffer = new MemoryStream();
 
-                var responseBuffer = new MemoryStream();
-                var responseResult = await tunnel.ReceiveBytesAsync(responseBuffer, CancellationToken.None);
+                var responseResult = await WebSocketHelpers.ReceiveBytesAsync(tunnel, responseBuffer, cancellationToken);
+                //var responseResult = await tunnel.ReceiveBytesAsync(responseBuffer, CancellationToken.None);
 
                 var buffer = responseBuffer.GetBuffer();
                 // Deserialize and apply the HTTP response
-                return DeserializeAndApplyHttpResponse(buffer);
+                var responseMessage = DeserializeAndApplyHttpResponse(buffer);
+                _logger.LogInformation($"requestID '{currentReqId}' response result: {responseMessage.StatusCode}");
+                return new HttpResponseMessage(System.Net.HttpStatusCode.InternalServerError) {
+                    Content = new StringContent($"Error processing tunneled response: to improve") };
             }
             // Helper methods for serializing HTTP requests/responses through the WebSocket tunnel
             private static async Task<byte[]> SerializeHttpRequestAsync(HttpRequestMessage request)
@@ -264,7 +268,7 @@ namespace PGrok.Server
 
                 TunneledRequest tunneledRequest = new() {
                     Method = request.Method.ToString(),
-                    Path = request.RequestUri.PathAndQuery,                    
+                    Path = request.RequestUri.PathAndQuery,
                 };
 
                 // Add headers
@@ -273,7 +277,7 @@ namespace PGrok.Server
                 {
                     headers[header.Key] = string.Join(",", header.Value);
                 }
-                
+
                 tunneledRequest.Headers = headers;
                 // Add content/body if present
                 if (request.Content != null)
@@ -351,8 +355,165 @@ namespace PGrok.Server
                     return errorResponse;
                 }
             }
-
         }
+
+        class TunnelingMessageHandler : HttpMessageHandler
+        {
+            public TunnelingMessageHandler()
+            {
+                
+            }
+
+            protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            {
+                throw new NotImplementedException();
+            }
+        }
+
+        //class TunnelingMessageHandler : HttpMessageHandler
+        //{
+        //    private readonly TunnelConnectionManager _tunnelManager;
+        //    private WebSocket? tunnel;
+        //    ILogger _logger;
+
+        //    public TunnelingMessageHandler(TunnelConnectionManager tunnelManager, ILogger logger)
+        //    {
+        //        _tunnelManager = tunnelManager;
+        //        _logger = logger;
+        //    }
+
+
+        //    protected override HttpResponseMessage Send(HttpRequestMessage request, CancellationToken cancellationToken)
+        //    {
+        //        return base.Send(request, cancellationToken);
+        //    }
+
+        //    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        //    {
+        //        if (tunnel == null)
+        //        {
+        //            tunnel = _tunnelManager.GetAvailableTunnel();
+        //            if (tunnel == null)
+        //            {
+        //                _logger.LogWarning("No available tunnels for request to {Path}", request.RequestUri);
+        //                return new HttpResponseMessage(System.Net.HttpStatusCode.ServiceUnavailable);
+        //            }
+        //        }
+
+        //        // Serialize the HTTP request to send through the tunnel
+        //        var requestData = await SerializeHttpRequestAsync(request);
+
+        //        // Send the request through the tunnel
+        //        await tunnel.SendAsync(
+        //            new ArraySegment<byte>(requestData),
+        //            WebSocketMessageType.Text,
+        //            true,
+        //            CancellationToken.None);
+
+        //        // Wait for and process the response
+
+        //        var responseBuffer = new MemoryStream();
+        //        var responseResult = await tunnel.ReceiveBytesAsync(responseBuffer, CancellationToken.None);
+
+        //        var buffer = responseBuffer.GetBuffer();
+        //        // Deserialize and apply the HTTP response
+        //        return DeserializeAndApplyHttpResponse(buffer);
+        //    }
+        //    // Helper methods for serializing HTTP requests/responses through the WebSocket tunnel
+        //    private static async Task<byte[]> SerializeHttpRequestAsync(HttpRequestMessage request)
+        //    {
+
+        //        TunneledRequest tunneledRequest = new() {
+        //            Method = request.Method.ToString(),
+        //            Path = request.RequestUri.PathAndQuery,                    
+        //        };
+
+        //        // Add headers
+        //        var headers = new Dictionary<string, string>();
+        //        foreach (var header in request.Headers)
+        //        {
+        //            headers[header.Key] = string.Join(",", header.Value);
+        //        }
+
+        //        tunneledRequest.Headers = headers;
+        //        // Add content/body if present
+        //        if (request.Content != null)
+        //        {
+        //            var contentHeaders = new Dictionary<string, string>();
+        //            foreach (var header in request.Content.Headers)
+        //            {
+        //                contentHeaders[header.Key] = string.Join(",", header.Value);
+        //            }
+        //            tunneledRequest.ContentHeaders = contentHeaders;
+
+        //            // Read the content body
+        //            byte[] bodyBytes = await request.Content.ReadAsByteArrayAsync();
+        //            tunneledRequest.Body = bodyBytes;
+        //        }
+
+        //        // Serialize to JSON
+        //        string jsonRequest = System.Text.Json.JsonSerializer.Serialize(tunneledRequest);
+        //        return Encoding.UTF8.GetBytes(jsonRequest);
+        //    }
+
+        //    private static HttpResponseMessage DeserializeAndApplyHttpResponse(byte[] data)
+        //    {
+        //        try
+        //        {
+        //            // Convert binary data to string
+        //            string jsonResponse = Encoding.UTF8.GetString(data);
+
+        //            TunneledResponse response1 = System.Text.Json.JsonSerializer.Deserialize<TunneledResponse>(jsonResponse);
+
+        //            if (response1 == null)
+        //            {
+        //                //TODO
+        //                return new HttpResponseMessage(System.Net.HttpStatusCode.InternalServerError);
+        //            }
+
+
+        //            // Create HTTP response
+        //            var response = new HttpResponseMessage();
+
+        //            response.StatusCode = (System.Net.HttpStatusCode)response1.StatusCode;
+
+        //            // Add headers
+        //            if (response1.Headers != null)
+        //            {
+        //                foreach (var kv in response1.Headers)
+        //                {
+        //                    response.Headers.TryAddWithoutValidation(kv.Key, kv.Value);
+        //                }
+        //            }
+
+        //            // Add body and content headers
+        //            if (response1.Body != null)
+        //            {
+        //                var content = new ByteArrayContent(response1.Body);
+        //                response.Content = content;
+
+        //                if (response1.ContentHeaders != null)
+        //                {
+        //                    foreach (var kv in response1.ContentHeaders)
+        //                    {
+        //                        content.Headers.TryAddWithoutValidation(kv.Key, kv.Value);
+        //                    }
+        //                }
+        //            }
+
+        //            return response;
+        //        }
+        //        catch (Exception ex)
+        //        {
+        //            // Return an error response if deserialization fails
+        //            var errorResponse = new HttpResponseMessage(System.Net.HttpStatusCode.InternalServerError) {
+        //                Content = new StringContent($"Error processing tunneled response: {ex.Message}")
+        //            };
+        //            return errorResponse;
+        //        }
+        //    }
+
+        //}
     }
 
 }

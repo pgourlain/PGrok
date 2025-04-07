@@ -29,7 +29,7 @@ namespace PGrok.Server.Commands
 
         public override async Task<int> ExecuteAsync(CommandContext context, ServerSettings settings)
         {
-            PublicYARPServer.Start(settings);
+            await PublicYARPServer.Start(settings);
             return 0;
         }
     }

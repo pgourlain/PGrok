@@ -50,7 +50,7 @@ namespace PGrok.Common
                     {
                         result = await webSocket.ReceiveAsync(
                             new ArraySegment<byte>(buffer),
-                            cancellationToken);
+                            cancellationToken).ConfigureAwait(false);
                     }
                     catch (WebSocketException ex) when (ex.WebSocketErrorCode == WebSocketError.ConnectionClosedPrematurely)
                     {

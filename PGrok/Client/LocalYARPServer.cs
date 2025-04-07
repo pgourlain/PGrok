@@ -97,9 +97,16 @@ public class ReverseWebSocketTunnelService : BackgroundService
                 // Process messages from public YARP
                 await ProcessTunnelMessages(client, stoppingToken);
             }
-            catch (Exception ex)
+            catch (Exception
+#if DEBUG
+                ex
+#endif
+            )
             {
-                _logger.LogError(ex, "Error in tunnel connection. Reconnecting in 5 seconds...");
+#if DEBUG
+                _logger.LogDebug(ex, "tunnel connection lost");
+#endif
+                _logger.LogWarning("Error in tunnel connection. Reconnecting in 5 seconds...");
                 await Task.Delay(5000, stoppingToken);
             }
         }
@@ -107,7 +114,7 @@ public class ReverseWebSocketTunnelService : BackgroundService
 
     private async Task ProcessTunnelMessages(ClientWebSocket webSocket, CancellationToken stoppingToken)
     {
-        var buffer = new MemoryStream();
+        using var buffer = new MemoryStream();
 
         while (webSocket.State == WebSocketState.Open && !stoppingToken.IsCancellationRequested)
         {
@@ -122,8 +129,14 @@ public class ReverseWebSocketTunnelService : BackgroundService
                     stoppingToken);
                 break;
             }
-
-            await new LocalRequestHandler(_logger, _options.LocalAddress).HandleRequestAsync(buffer.GetBuffer(), webSocket, stoppingToken);
+            var status = await new LocalRequestHandler(_logger, _options.LocalAddress).HandleRequestAsync(buffer.GetBuffer(), webSocket, stoppingToken);
+            switch (status)
+            {
+                case HandleRequestStatus.Reconnect: return;
+                default:
+                    //do nothing
+                    break;
+            }
         }
     }
 }

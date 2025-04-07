@@ -1,11 +1,15 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.13.35605.110 d17.13
+VisualStudioVersion = 17.13.35605.110
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PGrokClient", "PGrokClient\PGrokClient.csproj", "{B36F92F4-795A-7107-979E-8B5D2897E84A}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PGrok", "PGrok\PGrok.csproj", "{792C2FF7-598B-A5BF-A39D-FEC5472337DD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SimpleLocalApi", "Samples\SimpleLocalApi\SimpleLocalApi.csproj", "{9A5E7EB9-9A56-4AAD-AE5A-5658CBE12653}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Samples", "Samples", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,9 +25,16 @@ Global
 		{792C2FF7-598B-A5BF-A39D-FEC5472337DD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{792C2FF7-598B-A5BF-A39D-FEC5472337DD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{792C2FF7-598B-A5BF-A39D-FEC5472337DD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9A5E7EB9-9A56-4AAD-AE5A-5658CBE12653}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9A5E7EB9-9A56-4AAD-AE5A-5658CBE12653}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9A5E7EB9-9A56-4AAD-AE5A-5658CBE12653}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9A5E7EB9-9A56-4AAD-AE5A-5658CBE12653}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{9A5E7EB9-9A56-4AAD-AE5A-5658CBE12653} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {9BF0552D-342F-414A-9059-FC632D6842A4}
